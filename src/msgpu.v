@@ -1,10 +1,15 @@
 module msgpu (
    input clock,
+   input mcu_bus_clock,
+   input [7:0] mcu_bus,
+   input mcu_bus_command_data,
+   input mcu_bus_enable,
    output hsync,
    output vsync,
    output [3:0] vga_red,
    output [3:0] vga_green,
-   output [3:0] vga_blue 
+   output [3:0] vga_blue,
+   output [1:0] led
 );
 
 pll vga_pll(
@@ -13,39 +18,28 @@ pll vga_pll(
    .clkin(clock)
 );
 
+vga vga_instance(
+    .clock(CLOCK_PIXEL),
+    .hsync(hsync),
+    .vsync(vsync),
+    .visible_area(visible_area)
+);
 
-// HSYNC //
-reg [10:0] hsync_counter;
-wire line_end = (hsync_counter == 10'd799);
-wire hsync_pulse = (hsync_counter >= 10'd656 && hsync_counter <= 10'd752);
+mcu_bus mcu(
+    .sysclk(clock),
+    .busclk(mcu_bus_clock),
+    .bus(mcu_bus[7:0]),
+    .enable(mcu_bus_enable),
+    .command_data(mcu_bus_command_data),
+    .data_out(data),
+    .led(led[1:0])
+);
 
-always @(posedge CLOCK_PIXEL) begin 
-   if (line_end) 
-       hsync_counter <= 0;
-   else 
-       hsync_counter <= hsync_counter + 1;
-end 
+// assign led[2:0] = (data == 8'hffffffff)? 3b'110 : 3b'101;
+// assign led = (data == 8'hff)? 2'b10 : 2'b01;
 
-assign hsync = ~hsync_pulse;
-
-// VSYNC //
-reg [10:0] vsync_counter;
-wire frame_end = (vsync_counter == 10'd524);
-wire vsync_pulse = (vsync_counter >= 10'd490 && vsync_counter < 10'd492);
-
-always @(posedge CLOCK_PIXEL) begin 
-   if (frame_end) 
-       vsync_counter <= 0;
-   else if (line_end)
-       vsync_counter <= vsync_counter + 1;
-end 
-
-assign vsync = ~vsync_pulse;
-
-wire visible_area = (hsync_counter < 10'd640 && vsync_counter < 10'd480);
-
-assign vga_red = (visible_area && hsync_counter < 150)? 4'b1111 : 4'b0000;
-assign vga_blue = (visible_area && hsync_counter > 150)? 4'b1111 : 4'b0000;
-assign vga_green = (visible_area && hsync_counter > 500)? 4'b1111 : 4'b0000;
+assign vga_red = (visible_area)? 4'b1111 : 4'b0000;
+assign vga_blue = (visible_area)? 4'b1111 : 4'b0000;
+assign vga_green = (visible_area)? 4'b1111 : 4'b0000;
 
 endmodule
