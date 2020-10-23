@@ -3,13 +3,12 @@ module msgpu (
    input mcu_bus_clock,
    input [7:0] mcu_bus,
    input mcu_bus_command_data,
-   input mcu_bus_enable,
    output hsync,
    output vsync,
    output [3:0] vga_red,
    output [3:0] vga_green,
    output [3:0] vga_blue,
-   output [1:0] led
+   output led
 );
 
 pll vga_pll(
@@ -29,10 +28,9 @@ mcu_bus mcu(
     .sysclk(clock),
     .busclk(mcu_bus_clock),
     .bus(mcu_bus[7:0]),
-    .enable(mcu_bus_enable),
     .command_data(mcu_bus_command_data),
     .data_out(data),
-    .led(led[1:0])
+    .led(led)
 );
 
 // assign led[2:0] = (data == 8'hffffffff)? 3b'110 : 3b'101;
