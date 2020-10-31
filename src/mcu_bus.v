@@ -12,7 +12,7 @@ always @(posedge sysclk) SCKr = {SCKr[2:0], busclk};
 wire SCK_risingedge = (SCKr[3:1]==3'b011);  // now we can detect SCK rising edges
 wire SCK_fallingedge = (SCKr[3:1]==3'b110);  // and falling edges
 
-reg [8:0] delay_counter;
+reg [7:0] delay_counter;
 
 //always @(posedge sysclk) begin
 //    if (SCK_risingedge) begin
@@ -32,24 +32,24 @@ reg [8:0] delay_counter;
 //     data_out <= bus;
 //end
 
-always @(posedge sysclk) begin 
-    if (delay_counter != 3'd0) begin
+always @(posedge sysclk) begin
+    if (delay_counter != 8'd0) begin
         delay_counter = delay_counter - 1;
     end
 
     if (SCK_risingedge) begin
-        delay_counter = 3'd14;
+        delay_counter = 8'd14;
     end
 
-    if (delay_counter == 3'd1) begin 
-        if (bus == 8'hff) begin 
+    if (delay_counter == 8'd1) begin
+        if (bus == 8'hff) begin
             led = 1;
-        end 
-        if (bus == 8'h00) begin 
+        end
+        if (bus == 8'h00) begin
             led = 0;
-        end 
-    end 
-    
+        end
+    end
+
 end
 
 

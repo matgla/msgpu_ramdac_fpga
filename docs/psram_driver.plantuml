@@ -1,0 +1,46 @@
+@startuml psram_driver
+
+state Initialization {
+    [*] --> Delay
+    Delay --> Reset
+    Reset --> ReadEID
+    ReadEID --> PostTest
+    PostTest --> Failed : fail
+    PostTest --> Idle : pass
+}
+
+state Idle {
+    [*] --> WaitForCommand
+    WaitForCommand --> EnableQpi : not enabled
+    EnableQpi --> Read
+    WaitForCommand --> Read : qpi enabled
+    EnableQpi --> Write
+    WaitForCommand --> Write : qpi enabled
+}
+
+state Read {
+    [*] --> SetReadAddress
+    SetReadAddress --> WaitCycles
+    WaitCycles --> StoreByte
+    StoreByte --> StoreByte: until finished
+    StoreByte --> RaiseCE : finished
+    RaiseCE --> Idle
+}
+
+state RaiseCE {
+
+}
+
+state Write {
+    [*] --> SetWriteAddress
+    SetWriteAddress --> WriteByte
+    WriteByte --> WriteByte: until finished
+    WriteByte --> RaiseCE : finished
+    RaiseCE --> Idle
+}
+
+state EnableQpi {
+
+}
+
+@enduml

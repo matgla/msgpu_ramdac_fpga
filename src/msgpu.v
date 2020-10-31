@@ -1,7 +1,7 @@
 module msgpu (
    input clock,
    input mcu_bus_clock,
-   input [7:0] mcu_bus,
+   inout [7:0] mcu_bus,
    input mcu_bus_command_data,
    output hsync,
    output vsync,
@@ -11,18 +11,25 @@ module msgpu (
    output led
 );
 
+`ifdef NANO
 pll vga_pll(
+    /* verilator lint_off IMPLICIT */
    .clkout(CLOCK_SYS),
+    /* verilator lint_off IMPLICIT */
    .clkoutd(CLOCK_PIXEL),
    .clkin(clock)
 );
+`endif
 
 vga vga_instance(
+    /* verilator lint_off IMPLICIT */
     .clock(CLOCK_PIXEL),
     .hsync(hsync),
     .vsync(vsync),
     .visible_area(visible_area)
 );
+
+reg[7:0] data;
 
 mcu_bus mcu(
     .sysclk(clock),
@@ -32,6 +39,12 @@ mcu_bus mcu(
     .data_out(data),
     .led(led)
 );
+
+reg write_enable = 1'b0;
+
+// psram frame_buffer(
+//     .enable(write_enable)
+// );
 
 // assign led[2:0] = (data == 8'hffffffff)? 3b'110 : 3b'101;
 // assign led = (data == 8'hff)? 2'b10 : 2'b01;

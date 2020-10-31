@@ -6,7 +6,7 @@ module vga (
 );
 
 // HSYNC //
-reg [10:0] hsync_counter;
+reg [9:0] hsync_counter;
 wire line_end = (hsync_counter == 10'd799);
 wire hsync_pulse = (hsync_counter >= 10'd656 && hsync_counter <= 10'd752);
 
@@ -20,7 +20,7 @@ end
 assign hsync = ~hsync_pulse;
 
 // VSYNC //
-reg [10:0] vsync_counter;
+reg [9:0] vsync_counter;
 wire frame_end = (vsync_counter == 10'd524);
 wire vsync_pulse = (vsync_counter >= 10'd490 && vsync_counter < 10'd492);
 
