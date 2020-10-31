@@ -59,7 +59,6 @@ protected:
 
     uint8_t interchange_byte(uint8_t byte)
     {
-        std::cerr << "spi mode set" << std::endl;
         uint8_t rx_byte = 0;
         rx_byte |= interchange_bit(get_bit(byte, 7)) << 7;
         EXPECT_TRUE(sut_->psram_sclk);
@@ -72,7 +71,6 @@ protected:
         rx_byte |= interchange_bit(get_bit(byte, 0)) << 0;
         tick(); // change state
         EXPECT_FALSE(sut_->psram_sclk);
-        std::cerr << "byte sent" << std::endl;
         return rx_byte;
     }
 
@@ -112,7 +110,6 @@ TEST_F(PSRAMShould, InitializeDriverAfterTimeout)
         EXPECT_EQ(dummy_address, interchange_byte(0xff));
 
         constexpr uint8_t mfid = 0x0d;
-        std::cerr << "Send mfid !!!!" << std::endl;
         interchange_byte(mfid);
         delay(1);
         constexpr uint8_t passed_kgd = 0x5d;

@@ -30,11 +30,16 @@ vga vga_instance(
 );
 
 reg[7:0] data;
+reg dataclk;
+reg[31:0] address;
 
 mcu_bus mcu(
     .sysclk(clock),
     .busclk(mcu_bus_clock),
-    .bus(mcu_bus[7:0]),
+    .bus_in(mcu_bus[7:0]),
+    .bus_out(mcu_bus[7:0]),
+    .dataclk(dataclk),
+    .address(address),
     .command_data(mcu_bus_command_data),
     .data_out(data),
     .led(led)

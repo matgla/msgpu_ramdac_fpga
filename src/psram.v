@@ -48,7 +48,6 @@ reg[1:0] current_spi_mode;
 reg[7:0] state;
 
 always @(current_spi_mode) begin
-    // $display("Changing spi mode %d\n", current_spi_mode);
     case (current_spi_mode)
         `SPI_MODE_1: psram_sio_dir = 4'b0001;
         `SPI_MODE_4_INPUTS: psram_sio_dir = 4'b0000;
@@ -76,7 +75,6 @@ always @(posedge psram_sclk or posedge reset) begin
         if (psram_sclk) begin
             case (current_spi_mode)
                 `SPI_MODE_1: begin
-                    $display("next bit: %x", psram_sio);
                     rx_buffer_low <= {rx_buffer_low[6:0], psram_sio[1]};
                     rx_buffer_high <= {rx_buffer_low[6:0], rx_buffer_low[7]};
                 end
@@ -104,7 +102,6 @@ begin
             psram_sio[0] <= output_data[7];
             psram_sclk_enable <= 1'b1;
             temp <= 8'd1;
-            $display("First bit");
         end
         8'd1: begin temp <= 8'd2; psram_sio[0] <= output_data[6]; end
         8'd2: begin temp <= 8'd3; psram_sio[0] <= output_data[5]; end

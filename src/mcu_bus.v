@@ -1,56 +1,116 @@
 module mcu_bus (
     input sysclk,
     input busclk,
-    inout [7:0] bus,
+    input [7:0] bus_in,
+    output reg [7:0] bus_out,
     input command_data,
+    output reg dataclk,
     output reg [7:0] data_out,
+    output reg [31:0] address,
     output reg led
 );
 
-reg [3:0] SCKr;
-always @(posedge sysclk) SCKr = {SCKr[2:0], busclk};
-wire SCK_risingedge = (SCKr[3:1]==3'b011);  // now we can detect SCK rising edges
-wire SCK_fallingedge = (SCKr[3:1]==3'b110);  // and falling edges
+reg [3:0] sck;
+always @(posedge sysclk) sck <= {sck[2:0], busclk};
+wire risingedge = (sck[3:1]==3'b011);  // now we can detect SCK rising edges
+wire fallingedge = (sck[3:1]==3'b110);  // and falling edges
 
-reg [7:0] delay_counter;
+`define GET_ID 8'h01
+`define SET_ADDRESS 8'h02
 
-//always @(posedge sysclk) begin
-//    if (SCK_risingedge) begin
-//        delay_counter = 3'd7;
-//    end
-//     if (SCK_risingedge) begin
-//         led <= 2'b00;
-         // if (bus[1] == 1'b1) begin
-         // end
-         // if (bus[1] == 1'b0) begin
-         //     led <= 2'b01;
-         // end
-//     end
+`define STATE_IDLE 4'h00
+`define STATE_SEND_ID 4'h01
+`define STATE_SET_ADDRESS 4'h02
+`define STATE_SET_BANK 4'h03
+`define STATE_PROCESS_COMMAND 4'h04
 
-//     if (sck_off) led <= 2'b00;
+localparam MSGPU_ID = 8'hae;
 
-//     data_out <= bus;
-//end
+reg [3:0] state = `STATE_IDLE;
+
+reg [3:0] task_state = 4'b0;
+
+reg [7:0] command;
+
+task PROCESS_COMMAND;
+    input [7:0] cmd;
+    input [7:0] data;
+begin 
+    case (cmd)
+        `GET_ID: begin
+            state <= `STATE_SEND_ID;
+            task_state <= 4'd0;
+            command <= 8'd0;
+        end 
+        `SET_ADDRESS: begin 
+            state <= `STATE_PROCESS_COMMAND;
+            case (task_state)
+                4'd0: begin 
+                    task_state <= 4'd1;
+                end
+                4'd1: begin 
+                    address[31:24] <= data[7:0];
+                    task_state <= 4'd2;
+                end
+                4'd2: begin 
+                    address[23:16] <= data;
+                    task_state <= 4'd3;
+                end
+                4'd3: begin 
+                    address[15:8] <= data;
+                    task_state <= 4'd4;
+
+                end
+                4'd4: begin 
+                    address[7:0] <= data;
+                    task_state <= 4'd0;
+                    command <= 8'd0;
+                    state <= `STATE_IDLE;
+                end
+                default: begin 
+                    task_state <= 4'd0;
+                    state <= `STATE_IDLE;
+                end
+            endcase
+        end
+        default: begin end
+    endcase
+end
+endtask
 
 always @(posedge sysclk) begin
-    if (delay_counter != 8'd0) begin
-        delay_counter = delay_counter - 1;
-    end
-
-    if (SCK_risingedge) begin
-        delay_counter = 8'd14;
-    end
-
-    if (delay_counter == 8'd1) begin
-        if (bus == 8'hff) begin
-            led = 1;
-        end
-        if (bus == 8'h00) begin
-            led = 0;
-        end
-    end
-
+    dataclk <= 1'b0;
+    if (risingedge) begin 
+        case (state)
+            `STATE_IDLE: begin 
+                if (command_data == 1'b0) begin 
+                    command <= bus_in;
+                    PROCESS_COMMAND(bus_in, bus_in);
+                end 
+                else begin 
+                    data_out <= bus_in;
+                    dataclk <= 1'b1;
+                end
+            end
+            `STATE_SEND_ID: begin
+                case (task_state)
+                    4'd0: begin 
+                        task_state <= 4'd1;
+                    end
+                    4'd1: begin 
+                        bus_out <= 8'hae;
+                        state <= `STATE_IDLE;  
+                        task_state <= 4'd0; 
+                    end 
+                    default: begin end
+                endcase
+            end
+            `STATE_PROCESS_COMMAND: begin 
+                PROCESS_COMMAND(command, bus_in);
+            end
+            default: state <= `STATE_IDLE;
+        endcase
+    end 
 end
-
 
 endmodule
