@@ -1,7 +1,11 @@
 module vga (
    input clock,
+   input[11:0] data,
    output hsync,
    output vsync,
+   output reg[3:0] red,
+   output reg[3:0] green,
+   output reg[3:0] blue,
    output wire visible_area
 );
 
@@ -34,5 +38,13 @@ end
 assign vsync = ~vsync_pulse;
 
 assign visible_area = (hsync_counter < 10'd640 && vsync_counter < 10'd480);
+
+always @(posedge clock) begin
+    if (visible_area) begin
+        red <= data[11:8];
+        green <= data[7:4];
+        blue <= data[3:0];
+    end
+end
 
 endmodule

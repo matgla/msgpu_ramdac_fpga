@@ -1,16 +1,21 @@
 module psram(
     input reset,
-    input clock,
+    input sysclk,
     output reg psram_sclk,
     output reg psram_ce_n,
-    inout reg[3:0] psram_sio,
-    inout reg[3:0] psram_sio_dir,
+    input[3:0] psram_sio_in,
+    output reg[3:0] psram_sio_out,
     output debug_led,
     input enable,
-    input reg[23:0] address,
+    // input reg[23:0] address,
     input reg rw,
-    input reg[7:0] data,
-    output next_byte_needed
+    output next_byte_needed,
+
+    // control
+    input clock,
+    input write,
+    input[23:0] address,
+    input[7:0] data
 );
 
 /* SPI modes */
@@ -37,9 +42,10 @@ module psram(
 `define IPS6404L_SQ_CE_HIGH 1'b0
 
 reg psram_sclk_enable;
-/* driveable clock */
+reg[3:0] psram_sio_dir;
+/* driveable system_clock */
 gated_clock gated_clk(
-    .clock(clock),
+    .clock(sysclk),
     .clock_output(psram_sclk),
     .enable(psram_sclk_enable)
 );
@@ -75,11 +81,11 @@ always @(posedge psram_sclk or posedge reset) begin
         if (psram_sclk) begin
             case (current_spi_mode)
                 `SPI_MODE_1: begin
-                    rx_buffer_low <= {rx_buffer_low[6:0], psram_sio[1]};
+                    rx_buffer_low <= {rx_buffer_low[6:0], psram_sio_in[1]};
                     rx_buffer_high <= {rx_buffer_low[6:0], rx_buffer_low[7]};
                 end
                 `SPI_MODE_4_INPUTS: begin
-                    rx_buffer_low <= {rx_buffer_low[3:0], psram_sio};
+                    rx_buffer_low <= {rx_buffer_low[3:0], psram_sio_in};
                     rx_buffer_high <= {rx_buffer_high[3:0], rx_buffer_low[7:4]};
                 end
                 default: begin end
@@ -99,19 +105,19 @@ begin
     current_spi_mode <= `SPI_MODE_1;
     case (temp)
         8'd0: begin
-            psram_sio[0] <= output_data[7];
+            psram_sio_out[0] <= output_data[7];
             psram_sclk_enable <= 1'b1;
             temp <= 8'd1;
         end
-        8'd1: begin temp <= 8'd2; psram_sio[0] <= output_data[6]; end
-        8'd2: begin temp <= 8'd3; psram_sio[0] <= output_data[5]; end
-        8'd3: begin temp <= 8'd4; psram_sio[0] <= output_data[4]; end
-        8'd4: begin temp <= 8'd5; psram_sio[0] <= output_data[3]; end
-        8'd5: begin temp <= 8'd6; psram_sio[0] <= output_data[2]; end
-        8'd6: begin temp <= 8'd7; psram_sio[0] <= output_data[1]; end
+        8'd1: begin temp <= 8'd2; psram_sio_out[0] <= output_data[6]; end
+        8'd2: begin temp <= 8'd3; psram_sio_out[0] <= output_data[5]; end
+        8'd3: begin temp <= 8'd4; psram_sio_out[0] <= output_data[4]; end
+        8'd4: begin temp <= 8'd5; psram_sio_out[0] <= output_data[3]; end
+        8'd5: begin temp <= 8'd6; psram_sio_out[0] <= output_data[2]; end
+        8'd6: begin temp <= 8'd7; psram_sio_out[0] <= output_data[1]; end
         8'd7: begin
             temp <= 8'd8;
-            psram_sio[0] <= output_data[0];
+            psram_sio_out[0] <= output_data[0];
         end
         8'd8: begin
             psram_sclk_enable <= 1'b0;
@@ -338,11 +344,11 @@ endtask
 `define STATE_RESET 4'd2
 `define STATE_READ_EID 4'd3
 `define STATE_VERIFY 4'd4
-`define STATE_IDLE 4'd5
+`define PSRAM_STATE_IDLE 4'd5
 
 reg is_first_byte;
 
-always @(negedge clock or posedge reset) begin
+always @(negedge sysclk or posedge reset) begin
     case (driver_state)
         `STATE_INIT: begin
             state <= 0;
@@ -356,15 +362,15 @@ always @(negedge clock or posedge reset) begin
             PSRAM_RESET(`STATE_READ_EID);
         end
         `STATE_READ_EID: begin
-            PSRAM_READ_EID(`STATE_IDLE);
+            PSRAM_READ_EID(`PSRAM_STATE_IDLE);
         end
-        `STATE_IDLE: begin
+        `PSRAM_STATE_IDLE: begin
             if (kdg == 8'h5d) debug_led <= 1'b0;
-            if (enable == 1'b1) begin
-                if (rw) begin // read
-
+            if (clock) begin
+                if (write) begin // write
+                    $display("write %x to psram at address: %x", data, address);
                 end
-                else begin // write
+                else begin // read
 
                 end
             end
@@ -376,6 +382,20 @@ always @(negedge clock or posedge reset) begin
         end
     endcase
 end
+
+reg operation_is_waiting;
+reg [7:0] buffer;
+
+// always @(posedge clock) begin
+//     if (write) begin
+//         $display("write to psram at address: %x", address);
+//         operation_is_waiting <= 1'b1;
+//         buffer <= data;
+//     end
+//     else begin
+//         $display("read from address: %x", address);
+//     end
+// end
 
 endmodule
 

@@ -20,9 +20,9 @@ public:
 protected:
     void tick()
     {
-        sut_->clock = 0;
+        sut_->sysclk = 0;
         sut_->eval();
-        sut_->clock = 1;
+        sut_->sysclk = 1;
         sut_->eval();
     }
 
@@ -52,9 +52,9 @@ protected:
 
     uint8_t interchange_bit(uint8_t bit)
     {
-        set_bit(sut_->psram_sio, 1, bit);
+        set_bit(sut_->psram_sio_in, 1, bit);
         tick();
-        return get_bit(sut_->psram_sio, 0);
+        return get_bit(sut_->psram_sio_out, 0);
     }
 
     uint8_t interchange_byte(uint8_t byte)
@@ -74,16 +74,61 @@ protected:
         return rx_byte;
     }
 
+    void initialize()
+    {
+        delay(2004);
+        tick();
+        { // Receive reset enable command
+            EXPECT_TRUE(sut_->psram_ce_n);
+            const uint8_t reset_enable = interchange_byte(0xff);
+            EXPECT_EQ(reset_enable, reset_enable_command);
+            delay(1);
+            EXPECT_FALSE(sut_->psram_ce_n);
+        }
+        delay(1);
+        {
+            EXPECT_EQ(reset_command, interchange_byte(0xff));
+        }
+        delay(3);
+        {
+            EXPECT_EQ(read_id_command, interchange_byte(0xff));
+            constexpr uint8_t dummy_address = 0xff;
+            EXPECT_EQ(dummy_address, interchange_byte(0xff));
+            EXPECT_EQ(dummy_address, interchange_byte(0xff));
+            EXPECT_EQ(dummy_address, interchange_byte(0xff));
+
+            constexpr uint8_t mfid = 0x0d;
+            interchange_byte(mfid);
+            delay(1);
+            constexpr uint8_t passed_kgd = 0x5d;
+            interchange_byte(passed_kgd);
+            delay(1);
+            constexpr uint8_t eid = 0xff;
+            interchange_byte(eid);
+            delay(1);
+            interchange_byte(eid);
+            delay(1);
+            interchange_byte(eid);
+            delay(1);
+            interchange_byte(eid);
+            delay(1);
+            interchange_byte(eid);
+            delay(1);
+            interchange_byte(eid);
+            delay(3);
+            EXPECT_TRUE(sut_->psram_ce_n);
+        }
+        delay(1); // print
+    }
+
     std::unique_ptr<Vpsram> sut_;
 };
 
 TEST_F(PSRAMShould, InitializeDefaults)
 {
-    EXPECT_EQ(sut_->psram_sio_dir, 0);
     sut_->eval();
     sut_->enable = 1;
     sut_->eval();
-    EXPECT_EQ(sut_->psram_sio_dir, 1);
 }
 
 TEST_F(PSRAMShould, InitializeDriverAfterTimeout)
@@ -133,9 +178,15 @@ TEST_F(PSRAMShould, InitializeDriverAfterTimeout)
     delay(1); // print
 }
 
-// TEST_F(PSRAMShould, SendData)
-// {
-//     EXPECT_EQ(sut_->psram_sio, 0);
-//     EXPECT_EQ(0x1a, interchange_byte(0xff));
-//     EXPECT_EQ(0x1a, interchange_byte(0xff));
-// }
+TEST_F(PSRAMShould, WriteData)
+{
+    initialize();
+    sut_->clock = 1;
+    sut_->write = 1;
+    sut_->address = 0x1beef1;
+    sut_->data = 0xab;
+    tick();
+    tick();
+    sut_->clock = 0;
+    tick();
+}
