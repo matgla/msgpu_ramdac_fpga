@@ -92,7 +92,6 @@ reg next_byte;
 reg[23:0] psram_address;
 
 
-
 always @(posedge clock) begin
     if (dataclk) begin
         $display("data received: %x", data);

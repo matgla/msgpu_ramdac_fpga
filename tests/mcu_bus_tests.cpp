@@ -120,4 +120,3 @@ TEST_F(MCUBusTests, WriteAddress)
     send_byte(0x78);
     EXPECT_EQ(0x12345678, sut_->address);
 }
-
