@@ -8,6 +8,15 @@
             "target": "gtest",
             "options": {
             }
+        }, {
+            "link": "https://github.com/dpretet/async_fifo.git",
+            "type": "git",
+            "version": "master",
+            "directory": "async_fifo",
+            "target": "async_fifo",
+            "options": {
+
+            }
         }
     ]
 }

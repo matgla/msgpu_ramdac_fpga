@@ -1,3 +1,4 @@
+
 module clock_divider(
     input clkin,
     input[7:0] div,
@@ -23,8 +24,11 @@ always @(posedge clkin or negedge clkin) begin
     end
 
     if (!clkin) begin
-        counter <= counter + 8'h1;
+        if (counter >= div) counter <= 0;
+        else counter <= counter + 8'h1;
     end
+
 end
 
 endmodule
+`resetall

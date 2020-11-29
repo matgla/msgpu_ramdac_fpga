@@ -12,8 +12,8 @@ module psram(
     output next_byte_needed,
 
     // control
-    input clock,
-    input write,
+    input set_address,
+    input write_data,
     input[23:0] address,
     input[7:0] data
 );
@@ -366,13 +366,8 @@ always @(negedge sysclk or posedge reset) begin
         end
         `PSRAM_STATE_IDLE: begin
             if (kdg == 8'h5d) debug_led <= 1'b0;
-            if (clock) begin
-                if (write) begin // write
-                    $display("write %x to psram at address: %x", data, address);
-                end
-                else begin // read
-
-                end
+            if (set_address) begin
+                $display("write %x to psram at address: %x", data, address);
             end
             else begin
                 is_first_byte <= 1'b1;
@@ -399,3 +394,4 @@ reg [7:0] buffer;
 
 endmodule
 
+`resetall

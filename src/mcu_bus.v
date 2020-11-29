@@ -9,14 +9,13 @@ module mcu_bus (
     output reg dataclk,
     output reg cmdclk,
     output reg [7:0] data_out,
-    output reg [31:0] address,
-    output reg led
+    output reg [31:0] address
 );
 
-reg [3:0] sck;
-always @(posedge sysclk) sck <= {sck[2:0], busclk};
-wire risingedge = (sck[3:1]==3'b011);  // now we can detect SCK rising edges
-wire fallingedge = (sck[3:1]==3'b110);  // and falling edges
+reg [2:0] sck;
+always @(posedge sysclk) sck <= {sck[1:0], busclk};
+wire risingedge = (sck[2:1]==2'b01);  // now we can detect SCK rising edges
+wire fallingedge = (sck[2:1]==2'b10);  // and falling edges
 
 `define GET_ID 8'h01
 
@@ -119,3 +118,5 @@ always @(posedge sysclk) begin
 end
 
 endmodule
+
+`resetall

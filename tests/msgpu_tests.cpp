@@ -35,9 +35,7 @@ protected:
         sut_->mcu_bus_clock = 1;
         tick();
         tick();
-        tick();
         sut_->mcu_bus_clock = 0;
-        tick();
         tick();
         tick();
     }
@@ -79,4 +77,59 @@ TEST_F(MsgpuShould, WriteDataToPsram)
 {
     tick();
     set_address(0xdeadbeef);
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+}
+
+TEST_F(MsgpuShould, SendDataToPsram)
+{
+    tick();
+    send(0x12345678);
+    send(0xaabbccdd);
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
 }

@@ -181,12 +181,27 @@ TEST_F(PSRAMShould, InitializeDriverAfterTimeout)
 TEST_F(PSRAMShould, WriteData)
 {
     initialize();
-    sut_->clock = 1;
-    sut_->write = 1;
+    sut_->set_address = 1;
     sut_->address = 0x1beef1;
     sut_->data = 0xab;
     tick();
     tick();
-    sut_->clock = 0;
+    sut_->set_address = 0;
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
+    tick();
     tick();
 }

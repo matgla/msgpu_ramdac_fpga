@@ -1,8 +1,9 @@
 module fifo #(
     parameter DATA_WIDTH /*verilator public*/ = 8,
-    parameter DATA_SIZE /*verilator public*/ = 4 
+    parameter DATA_SIZE /*verilator public*/ = 4
 )(
     input clockin,
+    input clockout,
     input [DATA_WIDTH - 1:0] datain,
     output reg [DATA_WIDTH - 1:0] dataout,
     input datain_enable,
@@ -25,10 +26,10 @@ assign full = (size_counter == DATA_SIZE);
 //--------------------//
 //   writer pointer   //
 //--------------------//
-always @(posedge clockin or posedge reset) begin 
-    if (reset) begin 
+always @(posedge clockin or posedge reset) begin
+    if (reset) begin
         writer_pointer <= 0;
-    end else if (datain_enable && !full) begin 
+    end else if (datain_enable && !full) begin
         writer_pointer <= writer_pointer + 1;
     end
 end
@@ -36,10 +37,10 @@ end
 //--------------------//
 //    read pointer    //
 //--------------------//
-always @(posedge clockin or posedge reset) begin 
-    if (reset) begin 
+always @(posedge clockout or posedge reset) begin
+    if (reset) begin
         reader_pointer <= 0;
-    end else if (dataout_enable && !empty) begin 
+    end else if (dataout_enable && !empty) begin
         reader_pointer <= reader_pointer + 1;
     end
 end
@@ -47,18 +48,22 @@ end
 //--------------------//
 //     management     //
 //--------------------//
-always @(posedge clockin or posedge reset) begin 
-    if (reset) begin 
+always @(posedge clockin or posedge reset) begin
+    if (reset) begin
         size_counter <= 0;
-    end else if (datain_enable && !full) begin 
+    end else if (datain_enable && !full) begin
         memory[writer_pointer] <= datain;
         size_counter <= size_counter + 1;
-    end else if (dataout_enable && !empty) begin 
+    end else if (dataout_enable && !empty) begin
         dataout <= memory[reader_pointer];
         size_counter <= size_counter - 1;
-    end else if (dataout_enable && empty) begin 
+    end else if (dataout_enable && empty) begin
         dataout <= 0;
     end
+end
+
+always @(posedge clockout or posedge reset) begin
+
 end
 
 endmodule
