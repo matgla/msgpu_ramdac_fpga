@@ -89,7 +89,7 @@ always @(posedge sysclk) begin
             `STATE_IDLE: begin
                 if (command_data == 1'b0) begin
                     command <= bus_in;
-                    PROCESS_COMMAND(bus_in, bus_in);
+                    cmdclk <= 1'b1;
                 end
                 else begin
                     data_out <= bus_in;

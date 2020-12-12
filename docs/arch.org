@@ -1,0 +1,12 @@
+* Top Level Headline [%]
+** Second level 
+*** Third level 
+      some text 
+*** Third level 
+      more text 
+
+* Another headline 
+
+*** TODO Write letter to Sam Fortune
+*** TODO Next task
+* [] some task to do

@@ -1,5 +1,5 @@
 `include "commands.v"
-
+`include "vga_commands.v"
 module msgpu (
     input clock,
     input mcu_bus_clock,
@@ -52,238 +52,198 @@ assign system_clock = clock;
 
 `endif
 
+
 /********************************/
 /********************************/
 /**          MCU BUS           **/
 /********************************/
 /********************************/
 
-wire mcu_data_clock;
-wire mcu_command_clock;
-reg [31:0] mcu_address;
-reg [7:0] mcu_data;
+/* DATA PATH */ 
+// MCU -> FRAMEBUFFER_MEMORY -> FIFO -> VGA 
+// bus clock   system clock        vga clock 
 
-mcu_bus mcu(
-    .sysclk(system_clock),
-    .busclk(mcu_bus_clock),
-    .bus_in(mcu_bus[7:0]),
-    .bus_out(mcu_bus[7:0]),
-    .dataclk(mcu_data_clock),
-    .cmdclk(mcu_command_clock),
-    .address(mcu_address),
-    .command_data(mcu_bus_command_data),
-    .data_out(mcu_data)
-);
-
-// data from bus goes directly to data fifo
-reg reset_bus_fifo;
-wire reset_bus_fifo_n;
-assign reset_bus_fifo_n = !reset_bus_fifo;
-
-wire is_bus_fifo_full;
-wire is_bus_fifo_almost_full;
-wire is_bus_fifo_empty;
-wire is_bus_fifo_almost_empty;
-reg fifo_write_enable;
-
-// wire psram_write_clock = n
-
+wire message_pixel_clock;
+wire message_command_clock;
+wire[7:0] command_data;
 reg[11:0] pixel_data;
-reg is_second_byte;
 
-always @(posedge dataclk) begin
-    if (!is_second_byte) begin
-        pixel_data[11:4] = mcu_data;
-        is_second_byte <= 1'b1;
-    end else begin
-        pixel_data[3:0] = mcu_data[3:0];
-        is_second_byte <= 1'b0;
-        fifo_write_enable <= 1'b1;
-    end
-end
-
-always @(posedge dataclk) begin
-    fifo_write_enable <= 1'b0;
-end
-
-async_fifo #(.DSIZE(640), .ASIZE(12), .FALLTHROUGH("FALSE"))
-bus_fifo(
-    .wclk(dataclk),
-    .wrst_n(reset_bus_fifo),
-    .winc(fifo_write_enable),
-    .wdata(mcu_data),
-    .wfull(is_bus_fifo_full),
-    .awfull(is_bus_fifo_almost_full),
-    .rclk()
+message_broker broker(
+    .system_clock(system_clock),
+    .mcu_bus_clock(mcu_bus_clock),
+    .mcu_bus(mcu_bus),
+    .mcu_bus_command_data(mcu_bus_command_data),
+    .mcu_pixel_clock(message_pixel_clock),
+    .mcu_command_clock(message_command_clock),
+    .command_data(command_data),
+    .pixel_data(pixel_data)
 );
 
-// FIFO from MCU to PSRAM
+reg[21:0] framebuffer_read_pointer;
+reg[21:0] framebuffer_write_pointer;
+reg framebuffer_write_enable;
+reg bus_fifo_write_enable;
 
 
+reg [1:0] receiver_state;
+reg pixel_received_flag;
+reg [2:0] pixel_received;
+
+reg [12:0] line_read_pointer;
+reg [12:0] line_write_pointer;
+reg line_write_enable;
+reg [11:0] line_data;
+reg [11:0] read_data;
+dual_port_ram #(.DATA_WIDTH(12), .ADDRESS_SIZE(13))
+line_buffer(
+    .data(read_data),
+    .read_address(line_read_pointer),
+    .write_address(line_write_pointer),
+    .write_enable(line_write_enable),
+    .write_clock(system_clock),
+    .read_clock(system_clock),
+    .output_data(line_data)
+);
+
+reg set_write_address;
+
+pixel_memory pixel_memory(
+    .system_clock(system_clock),
+    .pixel_data(pixel_data),
+    .pixel_clock(message_pixel_clock),
+    .framebuffer_read_pointer(framebuffer_read_pointer),
+    .write_address(framebuffer_write_pointer),
+    .set_write_address(set_write_address),
+    .read_data(read_data)
+);
 
 /********************************/
 /********************************/
 /**         VGA SECTION        **/
 /********************************/
 /********************************/
+wire visible_area;
+wire almost_visible_area;
+reg vga_enable;
 
-// FIFO from PSRAM to VGA
-
-// reg[11:0] vga_data;
+wire line_finished;
 
 vga vga_instance(
     /* verilator lint_off IMPLICIT */
-    .clock(CLOCK_PIXEL),
-    .data(vga_data),
+    .enable(vga_enable),
+    .clock(vga_clock),
+    .address(line_read_pointer),
+    .data(line_data),
     .hsync(hsync),
     .vsync(vsync),
     .visible_area(visible_area),
     .red(vga_red),
     .green(vga_green),
-    .blue(vga_blue)
+    .blue(vga_blue),
+    .almost_visible_area(almost_visible_area),
+    .line_finished(line_finished)
 );
 
-// reg write;
-// reg set_address;
-// reg clock_to_psram;
+reg vga_prepare;
+reg initialize;
 
-// psram framebuffer(
-//     .reset(reset),
-//     .sysclk(clock),
-//     .psram_sclk(psram_clk),
-//     .psram_ce_n(psram_ce_n),
-//     .psram_sio_in(psram_sio),
-//     .psram_sio_out(psram_sio),
-//     .debug_led(led),
-//     .enable(enable),
-//     .address(psram_address),
-//     .rw(rw),
-//     .data(data_to_psram),
-//     .next_byte_needed(next_byte),
-//     .set_address(set_address),
-//     .write_data(clock_to_psram)
-// );
+reg [2:0] vga_state;
 
-// reg [7:0] from_data_fifo;
+reg [31:0] line_display_counter;
+reg [31:0] pixel_display_counter;
 
-// wire is_data_fifo_empty;
-// wire is_data_fifo_almost_empty;
-// wire is_data_fifo_full;
-// wire is_data_fifo_almost_full;
-// reg reset_data_fifo;
-// reg increment_fifo_write;
-// reg increment_fifo_read;
-// wire reset_data_n;
-// assign reset_data_n = !reset_data_fifo;
-// reg read_data_fifo;
+reg [11:0] line_counter;
 
-// async_fifo #(.DSIZE(8), .ASIZE(8), .FALLTHROUGH("TRUE"))
-// data_fifo (
-//     .wclk(dataclk),
-//     .wrst_n(reset_data_n),
-//     .winc(dataclk),
-//     .wdata(data),
-//     .wfull(is_data_fifo_full),
-//     .awfull(is_data_fifo_almost_full),
-//     .rclk(CLOCK_PIXEL && visible_area),
-//     .rrst_n(reset_data_n),
-//     .rinc(increment_fifo_read),
-//     .rdata(from_data_fifo),
-//     .rempty(is_data_fifo_empty),
-//     .arempty(is_data_fifo_almost_empty));
+reg [2:0] line_finished_buffer;
+always @(posedge system_clock) line_finished_buffer <= {line_finished_buffer[1:0], line_finished};
+wire line_end_posedge = line_finished_buffer[1:0] == 2'b01;
 
-// always @(posedge CLOCK_PIXEL) begin
-//     if (visible_area) begin
-//         if (!is_data_fifo_empty) begin
-//             increment_fifo_read = 1'b1;
-//             $display("Data from fifo: %x", from_data_fifo);
-//         end else begin
-//             increment_fifo_read = 1'b0;
-//             $display("Data from fifo: %x", 0);
-//         end
-//     end
-// end
+reg[11:0] copied;
+reg second_line;
 
-// reg[7:0] data;
-// reg dataclk;
-// reg cmdclk;
-// reg[31:0] address;
+reg reset_sync;
 
-// mcu_bus mcu(
-//     .sysclk(clock),
-//     .busclk(mcu_bus_clock),
-//     .bus_in(mcu_bus[7:0]),
-//     .bus_out(mcu_bus[7:0]),
-//     .dataclk(dataclk),
-//     .cmdclk(cmdclk),
-//     .address(address),
-//     .command_data(mcu_bus_command_data),
-//     .data_out(data),
-//     .led(led)
-// );
+always @(posedge system_clock or posedge reset_sync) begin 
+    if (reset_sync) begin
+        line_write_pointer <= 0;
+        framebuffer_read_pointer <= 0;
+        copied <= 0;
+    end
+    if (copied < 640) begin
+        if (!line_write_enable) begin 
+            framebuffer_read_pointer <= framebuffer_read_pointer + 1;
+            line_write_enable <= 1;
+        end else begin 
+            line_write_pointer <= line_write_pointer + 1;
+            framebuffer_read_pointer <= framebuffer_read_pointer + 1;
+            copied <= copied + 1;
+        end
+    end else begin 
+        line_write_enable <= 0;
+    end
 
-// reg reset;
-// reg enable;
-// reg rw;
-// reg[7:0] data_to_psram;
-// reg next_byte;
-// reg[23:0] psram_address;
+    if (line_end_posedge) begin 
+        copied <= 0;
+        line_write_enable <= 0;
+        framebuffer_read_pointer <= framebuffer_read_pointer - 1;
+        if (second_line) begin 
+            line_write_pointer <= 0;
+            second_line <= 0;
+        end else begin 
+            second_line <= 1;
+        end
+    end
+end
 
-// reg[23:0] video_address;
+localparam STATE_INITIALIZATION = 0;
+localparam STATE_WAITING_FOR_INITIALIZATION = 1;
+localparam STATE_START_FIFO_SYNC = 2;
+localparam STATE_WAITING_FOR_START_VGA = 3;
+localparam STATE_ENABLE_VGA = 4;
+localparam STATE_RESET_VSYNC = 5;
 
-// reg address_set_correctly;
+reg [4:0] counter;
+reg [3:0] state;
 
-// reg [3:0] msgpu_state;
-// reg [3:0] task_counter;
-
-// task set_framebuffer_address;
-// input [23:0] new_address;
-// reg [3:0] next_state;
-// begin
-//     // case (task_counter)
-//     $display("Sending address change to psram: %x", new_address);
-//     psram_address <= new_address;
-//     set_address <= 1'b1;
-
-// end
-// endtask
-
-// // always @(posedge )
-// reg was_initialized;
-
-// always @(posedge clock) begin
-//     if (!was_initialized) begin
-//         reset_data_fifo <= 1'b1;
-//         was_initialized <= 1'b1;
-//     end
-//     else begin
-//         reset_data_fifo <= 1'b0;
-//     end
-//     if (cmdclk) begin
-//         $display("Command received: %x", data);
-//         case (data)
-//             `SET_ADDRESS: begin
-//                 $display("address received: %x", address[31:8]);
-//                 set_framebuffer_address(address[31:8]);
-//             end
-//             default: begin end
-//         endcase
-
-//     end
-// end
-
-// reg write_enable = 1'b0;
-
-// // psram frame_buffer(
-// //     .enable(write_enable)
-// // );
-
-// // assign led[2:0] = (data == 8'hffffffff)? 3b'110 : 3b'101;
-// // assign led = (data == 8'hff)? 2'b10 : 2'b01;
-
-// // assign vga_red = (visible_area)? 4'b1111 : 4'b0000;
-// // assign vga_blue = (visible_area)? 4'b1111 : 4'b0000;
-// // assign vga_green = (visible_area)? 4'b1111 : 4'b0000;
+always @(posedge system_clock) begin
+    case (state)
+        STATE_INITIALIZATION: begin 
+            $display("Initialization");
+            counter <= 0;
+            state <= STATE_WAITING_FOR_INITIALIZATION;
+        end
+        STATE_WAITING_FOR_INITIALIZATION: begin 
+            if (message_command_clock) begin 
+                $display("Command: %d", mcu_bus);
+                if (mcu_bus == 8'd2) begin 
+                    $display("Waiting for VGA start");
+                    counter <= 0;
+                    state <= STATE_START_FIFO_SYNC;
+                end
+            end
+        end
+        STATE_START_FIFO_SYNC: begin 
+            reset_sync <= 1; 
+            state <= STATE_WAITING_FOR_START_VGA;
+        end
+        STATE_WAITING_FOR_START_VGA: begin 
+            reset_sync <= 0;
+            if (counter == 7) begin 
+                counter <= 0;
+                state <= STATE_ENABLE_VGA;
+            end 
+            counter <= counter + 1;
+        end
+        STATE_ENABLE_VGA: begin 
+            vga_enable <= 1;
+        end
+        STATE_RESET_VSYNC: begin 
+        end
+        default: begin 
+            state <= STATE_INITIALIZATION;
+        end
+    endcase
+end
 
 endmodule
 
