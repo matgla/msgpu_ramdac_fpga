@@ -163,11 +163,18 @@ reg second_line;
 
 reg reset_sync;
 
+always @(posedge vsync) begin 
+    $display("VSYNC");
+end
+
 always @(posedge system_clock or posedge reset_sync) begin 
     if (reset_sync) begin
         line_write_pointer <= 0;
         framebuffer_read_pointer <= 0;
         copied <= 0;
+    end
+    if (!vsync) begin 
+        $display("vsync");
     end
     if (copied < 640) begin
         if (!line_write_enable) begin 

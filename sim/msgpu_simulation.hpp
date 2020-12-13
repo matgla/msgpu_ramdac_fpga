@@ -17,8 +17,10 @@
 #ifndef MSGPU_SIMULATION_H
 #define MSGPU_SIMULATION_H
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 
 #include <functional>
 
@@ -27,6 +29,21 @@
 
 #include <thread>
 #include <vector>
+#include <queue>
+
+class McuInterface
+{
+public:
+    enum class State 
+    {
+        Idle,
+        BusHigh,
+        BusLow
+    };
+
+private:
+    
+};
 
 class MsgpuSimulation
 {
@@ -68,11 +85,14 @@ private:
 
     bool previous_hsync_state_;
     bool previous_vsync_state_;
-    uint8_t sclk_counter_;
+    std::atomic<uint8_t> sclk_counter_;
     std::thread thread_;
 
     uint64_t hsync_tick_stamp_;
     uint64_t ticks_for_vga_tick_;
+    std::mutex data_mutex_;
+    bool sclk_down_;
+    std::queue<std::pair<uint8_t, bool>> fifo_;
 };
 
 #endif /* MSGPU_SIMULATION_H */

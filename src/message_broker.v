@@ -40,6 +40,7 @@ always @(posedge mcu_data_clock) begin
             pixel_data[3:0] <= mcu_data[3:0];
             state <= STATE_RECEIVE_FIRST_PART;
             mcu_pixel_clock <= 1;
+            $display("data: %d", pixel_data);
         end
     endcase
 end

@@ -19,7 +19,8 @@
 #include <iostream>
 
 MsgpuSimulation::MsgpuSimulation(int argc, char *argv[])
-    : circuit_(std::make_unique<Vmsgpu>())
+    : tick_counter_(0)
+    , circuit_(std::make_unique<Vmsgpu>())
 {
     Verilated::commandArgs(argc, argv);
 }
@@ -38,19 +39,33 @@ void MsgpuSimulation::do_tick()
 {
     circuit_->clock = 0; 
     circuit_->eval();
-    circuit_->mcu_bus = bus_;
-    circuit_->clock = 1; 
-    circuit_->eval();
-    if (sclk_counter_ != 0) 
+
+    if (sclk_counter_ == 0 && !sclk_down_)
+    {
+        data_mutex_.lock();
+        if (fifo_.size())
+        {
+            sclk_counter_ = 2;
+            circuit_->mcu_bus = fifo_.front();
+            sclk_down_ = false;
+            fifo_.pop();
+        }
+        data_mutex_.unlock();
+    }
+    else if (sclk_counter_) 
     {
         --sclk_counter_;
-    }
-    else 
+    } 
+    else if ((sclk_down_ == false) && sclk_counter_ == 0) 
     {
-        circuit_->mcu_bus_clock = 0;
+        sclk_counter = 2; 
+        sclk_down_ = true;
     }
 
-    if (circuit_->vga_red || circuit_->vga_blue || circuit_->vga_green) std::cerr << "G";
+    circuit_->clock = 1; 
+    circuit_->eval();
+   
+
     ++tick_counter_;
     if (previous_hsync_state_ == 1 && circuit_->hsync == 0)
     {
@@ -86,22 +101,29 @@ void MsgpuSimulation::send_u16(uint16_t data)
 
 void MsgpuSimulation::send_u8(uint8_t byte) 
 {
+    data_mutex_.lock();
     bus_ = byte;
     circuit_->mcu_bus_command_data = 1;
     generate_sclk();
+    data_mutex_.unlock();
 }
 
 void MsgpuSimulation::send_command(uint8_t command) 
 {
+    data_mutex_.lock();
     bus_ = command; 
     circuit_->mcu_bus_command_data = 0;
     generate_sclk();
+    data_mutex_.unlock();
 }
 
 void MsgpuSimulation::generate_sclk() 
 {
-    circuit_->mcu_bus_clock = 1;
+    while (circuit_->mcu_bus_clock || sclk_counter_) 
+    {
+    }
     sclk_counter_ = 2;
+    circuit_->mcu_bus_clock = 1;
 }
 
 void MsgpuSimulation::send_line(const line_type& line)
