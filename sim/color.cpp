@@ -14,37 +14,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef IMAGE_LOADER_H
-#define IMAGE_LOADER_H
+#include "color.hpp"
 
-#include <cstdint>
-#include <string>
-#include <vector>
-
-#include <SFML/Graphics.hpp>
-
-class ImageLoader
+Color::Color(uint8_t r, uint8_t g, uint8_t b) 
+    : r_(r) 
+    , g_(g) 
+    , b_(b)
 {
-public:
-    struct Config 
-    {
-        int width;
-        int height;
-        int frames_in_row;
-        int frames_in_column;
-    };
+}
 
-    using Line = std::vector<uint16_t>;
-    using Frame = std::vector<Line>;
-    
-    ImageLoader(const std::string& path, Config config);
+Color Color::make_from_sfml(const sf::Color& color)
+{
+    return Color(color.r, color.g, color.b);
+}
 
-    Frame get_frame(int number) const;
+Color Color::make_from_rgb444(uint8_t r, uint8_t g, uint8_t b)
+{
+    return Color(r * 2, g * 2, b * 2);
+}
 
-private:
-    Config config_;
-    sf::Image image_; 
-};
+uint16_t Color::to_rgb444() const 
+{
+    return (static_cast<uint16_t>(r_ / uint16_t(2)) << 8)
+        | (static_cast<uint16_t>(g_ / 2u) << 4)
+        | static_cast<uint16_t>(b_ / 2u);
+}
 
-#endif /* IMAGE_LOADER_H */
-
+sf::Color Color::to_sfml() const 
+{
+    return sf::Color(r_, g_, b_);
+}

@@ -5,10 +5,16 @@ find_package(SFML COMPONENTS graphics REQUIRED)
 
 target_sources(msgpu_simulation
     PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/color.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/image_loader.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/window.hpp 
+        ${CMAKE_CURRENT_SOURCE_DIR}/msgpu_simulation.hpp
 
+        ${CMAKE_CURRENT_SOURCE_DIR}/color.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/image_loader.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/window.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/msgpu_simulation.cpp
 )
 
 target_link_libraries(msgpu_simulation
@@ -27,6 +33,16 @@ verilate(msgpu_simulation
     TOP_MODULE msgpu
 )
 
+target_compile_options(msgpu_simulation 
+    PRIVATE 
+        $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -Wpedantic -Wcast-align -Wunused -Wshadow
+        -Wpointer-arith -Wcast-qual -Wno-missing-braces -std=c++2a>
+)
+
 add_custom_command(TARGET msgpu_simulation POST_BUILD 
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test.png ${CMAKE_CURRENT_BINARY_DIR}/test.png)
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test.png ${CMAKE_CURRENT_BINARY_DIR}/test.png
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/msgpu_simulation
+    ${PROJECT_BINARY_DIR}/msgpu_simulation
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test.png ${PROJECT_BINARY_DIR}/test.png
+)
 
