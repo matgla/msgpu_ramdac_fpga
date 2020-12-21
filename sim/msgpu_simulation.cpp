@@ -21,7 +21,11 @@
 MsgpuSimulation::MsgpuSimulation(int argc, char *argv[])
     : tick_counter_(0)
     , circuit_(std::make_unique<Vmsgpu>())
+    , mcu_interface_{}
+    , vga_interface_(circuit_->hsync, circuit_->vsync, circuit_->vga_red, circuit_->vga_green, circuit_->vga_blue)
 {
+    circuit_->hsync = 1;
+    circuit_->vsync = 1;
     Verilated::commandArgs(argc, argv);
 }
 
@@ -37,93 +41,47 @@ void MsgpuSimulation::run()
 
 void MsgpuSimulation::do_tick()
 {
-    circuit_->clock = 0; 
-    circuit_->eval();
-
-    if (sclk_counter_ == 0 && !sclk_down_)
-    {
-        data_mutex_.lock();
-        if (fifo_.size())
-        {
-            sclk_counter_ = 2;
-            circuit_->mcu_bus = fifo_.front();
-            sclk_down_ = false;
-            fifo_.pop();
-        }
-        data_mutex_.unlock();
-    }
-    else if (sclk_counter_) 
-    {
-        --sclk_counter_;
-    } 
-    else if ((sclk_down_ == false) && sclk_counter_ == 0) 
-    {
-        sclk_counter = 2; 
-        sclk_down_ = true;
-    }
-
     circuit_->clock = 1; 
     circuit_->eval();
-   
 
+    mcu_interface_.process(tick_counter_, circuit_->mcu_bus, circuit_->mcu_bus_clock, circuit_->mcu_bus_command_data);
+    vga_interface_.process(tick_counter_);
+
+    circuit_->clock = 0; 
+    circuit_->eval();
+   
     ++tick_counter_;
-    if (previous_hsync_state_ == 1 && circuit_->hsync == 0)
-    {
-        ticks_for_vga_tick_ =  (tick_counter_ - hsync_tick_stamp_) / 800;
-        hsync_tick_stamp_ = tick_counter_;
-    }
-    uint64_t hsync_delta = tick_counter_ - hsync_tick_stamp_;
-    if (hsync_delta >= 144)
-    {
-        // now we are receiving pixels, but only in mod 8 
-        if (hsync_delta % ticks_for_vga_tick_) 
-        {
-            if (on_pixel_) 
-            {
-                on_pixel_(circuit_->vga_red, circuit_->vga_green, circuit_->vga_blue);
-            }
-        }
-    }
-    previous_hsync_state_ = circuit_->hsync;
-    previous_vsync_state_ = circuit_->vsync;
 }
 
 void MsgpuSimulation::on_pixel(const on_pixel_callback_type& callback)
 {
-    on_pixel_ = callback;
+    vga_interface_.on_pixel(callback);
+}
+
+void MsgpuSimulation::on_hsync(const hsync_callback_type& callback)
+{
+    vga_interface_.on_hsync(callback);
+}
+
+void MsgpuSimulation::on_vsync(const vsync_callback_type& callback)
+{
+    vga_interface_.on_vsync(callback);
 }
 
 void MsgpuSimulation::send_u16(uint16_t data)
 {
-    send_u8((data >> 8) & 0xff);
     send_u8(data & 0xff);
+    send_u8((data >> 8) & 0xff);
 }
 
 void MsgpuSimulation::send_u8(uint8_t byte) 
 {
-    data_mutex_.lock();
-    bus_ = byte;
-    circuit_->mcu_bus_command_data = 1;
-    generate_sclk();
-    data_mutex_.unlock();
+    mcu_interface_.send_data(byte);
 }
 
 void MsgpuSimulation::send_command(uint8_t command) 
 {
-    data_mutex_.lock();
-    bus_ = command; 
-    circuit_->mcu_bus_command_data = 0;
-    generate_sclk();
-    data_mutex_.unlock();
-}
-
-void MsgpuSimulation::generate_sclk() 
-{
-    while (circuit_->mcu_bus_clock || sclk_counter_) 
-    {
-    }
-    sclk_counter_ = 2;
-    circuit_->mcu_bus_clock = 1;
+    mcu_interface_.send_command(command);
 }
 
 void MsgpuSimulation::send_line(const line_type& line)
@@ -142,3 +100,7 @@ void MsgpuSimulation::send_frame(const frame_type& frame)
     }
 }
 
+void MsgpuSimulation::send_pixel(uint16_t color)
+{
+    send_u16(color);
+}

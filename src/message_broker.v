@@ -5,7 +5,6 @@ module message_broker(
     input mcu_bus_command_data, 
     output reg mcu_pixel_clock,
     output mcu_command_clock,
-    output[7:0] command_data,
     output[11:0] pixel_data 
 );
 
@@ -40,9 +39,14 @@ always @(posedge mcu_data_clock) begin
             pixel_data[3:0] <= mcu_data[3:0];
             state <= STATE_RECEIVE_FIRST_PART;
             mcu_pixel_clock <= 1;
-            $display("data: %d", pixel_data);
         end
     endcase
+end
+
+always @(posedge mcu_data_clock) begin 
+    if (mcu_data_clock == 0) begin 
+        $display("GOT address: %x", mcu_address);
+    end
 end
 
 endmodule

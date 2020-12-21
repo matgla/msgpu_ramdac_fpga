@@ -9,12 +9,16 @@ target_sources(msgpu_simulation
         ${CMAKE_CURRENT_SOURCE_DIR}/image_loader.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/window.hpp 
         ${CMAKE_CURRENT_SOURCE_DIR}/msgpu_simulation.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/mcu_interface.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/vga_interface.hpp 
 
         ${CMAKE_CURRENT_SOURCE_DIR}/color.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/image_loader.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/window.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/msgpu_simulation.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/mcu_interface.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/vga_interface.cpp
 )
 
 target_link_libraries(msgpu_simulation
@@ -31,6 +35,7 @@ verilate(msgpu_simulation
     INCLUDE_DIRS "${verilog_sources};${verilog_sources}/pll;${verilog_sources}/osc"
     SOURCES ${verilog_sources}/msgpu.v
     TOP_MODULE msgpu
+    VERILATOR_ARGS --threads 1 -Wall -Wpedantic 
 )
 
 target_compile_options(msgpu_simulation 

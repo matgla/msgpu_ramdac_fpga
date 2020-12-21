@@ -15,7 +15,6 @@ module mcu_bus (
 reg [2:0] sck;
 always @(posedge sysclk) sck <= {sck[1:0], busclk};
 wire risingedge = (sck[2:1]==2'b01);  // now we can detect SCK rising edges
-wire fallingedge = (sck[2:1]==2'b10);  // and falling edges
 
 `define GET_ID 8'h01
 

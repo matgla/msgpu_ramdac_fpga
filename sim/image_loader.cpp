@@ -37,7 +37,7 @@ ImageLoader::Frame ImageLoader::get_frame(int number) const
         frame[y].resize(config_.width);
         for (int x = 0; x < config_.width; ++x)
         {
-            frame[y][x] = Color::make_from_sfml(image_.getPixel(x, y)).to_rgb444();
+            frame[y][x] = Color::make_from_sfml(image_.getPixel(x + number * config_.width, y)).to_rgb444();
         }
     }
     return frame;

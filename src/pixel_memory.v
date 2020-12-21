@@ -3,8 +3,6 @@ module pixel_memory(
     input[11:0] pixel_data, 
     input pixel_clock, 
     input[21:0] framebuffer_read_pointer,
-    input[21:0] write_address,
-    input set_write_address,
     output[11:0] read_data
 );
 
@@ -22,10 +20,10 @@ ram_buffer(
    .output_data(read_data)
 );
 
-reg[2:0] pixel_received;
+reg[1:0] pixel_received;
 
 always @(posedge system_clock) begin 
-    pixel_received <= {pixel_received[1:0], pixel_clock};
+    pixel_received <= {pixel_received[0], pixel_clock};
 end
 wire pixel_posedge = pixel_received[1:0] == 2'b01;
 
@@ -38,27 +36,23 @@ always @(posedge system_clock) begin
     case (receiver_state) 
         RECEIVER_STATE_IDLE: begin 
             if (pixel_posedge) begin 
-                receiver_state <= RECEIVED_PIXEL; 
+                receiver_state <= INCREMENT_POINTER;
+                framebuffer_write_enable <= 1'b1;
             end
         end
-        RECEIVED_PIXEL: begin 
-            receiver_state <= INCREMENT_POINTER;
-            framebuffer_write_enable <= 1'b1;
-        end
         INCREMENT_POINTER: begin
-            framebuffer_write_pointer <= framebuffer_write_pointer + 1;
+            if (framebuffer_write_pointer == 640 * 480 - 1) begin 
+                framebuffer_write_pointer <= 0;
+            end else begin
+                framebuffer_write_pointer <= framebuffer_write_pointer + 1;
+            end
             receiver_state <= RECEIVER_STATE_IDLE;
+            framebuffer_write_enable <= 0;
         end
         default: begin 
             receiver_state <= RECEIVER_STATE_IDLE;
         end
     endcase
 end
-
-always @(posedge system_clock) begin
-    framebuffer_write_enable <= 1'b0;
-end
-
-
 
 endmodule

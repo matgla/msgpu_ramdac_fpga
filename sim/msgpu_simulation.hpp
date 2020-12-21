@@ -31,19 +31,8 @@
 #include <vector>
 #include <queue>
 
-class McuInterface
-{
-public:
-    enum class State 
-    {
-        Idle,
-        BusHigh,
-        BusLow
-    };
-
-private:
-    
-};
+#include "mcu_interface.hpp"
+#include "vga_interface.hpp"
 
 class MsgpuSimulation
 {
@@ -71,7 +60,6 @@ public:
     void send_frame(const frame_type& frame);
 
 private:
-    void generate_sclk();
     void do_tick();
 
     uint8_t bus_;
@@ -85,14 +73,13 @@ private:
 
     bool previous_hsync_state_;
     bool previous_vsync_state_;
-    std::atomic<uint8_t> sclk_counter_;
     std::thread thread_;
 
     uint64_t hsync_tick_stamp_;
     uint64_t ticks_for_vga_tick_;
-    std::mutex data_mutex_;
-    bool sclk_down_;
-    std::queue<std::pair<uint8_t, bool>> fifo_;
+
+    McuInterface mcu_interface_;
+    VgaInterface vga_interface_;
 };
 
 #endif /* MSGPU_SIMULATION_H */

@@ -26,11 +26,15 @@ class Color
 public:
     Color(uint8_t r, uint8_t g, uint8_t b);
     static Color make_from_rgb444(uint8_t r, uint8_t g, uint8_t b);
+    static Color make_from_rgb444(uint16_t pixel);
     static Color make_from_sfml(const sf::Color& color);
 
     uint16_t to_rgb444() const;
     sf::Color to_sfml() const;
 private:
+    static uint8_t normalize_to_4bit(uint8_t color);
+    static uint8_t normalize_to_8bit(uint8_t color);
+
     uint8_t r_; 
     uint8_t g_;
     uint8_t b_;

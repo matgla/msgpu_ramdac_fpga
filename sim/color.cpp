@@ -16,6 +16,8 @@
 
 #include "color.hpp"
 
+#include <iostream>
+
 Color::Color(uint8_t r, uint8_t g, uint8_t b) 
     : r_(r) 
     , g_(g) 
@@ -28,16 +30,36 @@ Color Color::make_from_sfml(const sf::Color& color)
     return Color(color.r, color.g, color.b);
 }
 
+Color Color::make_from_rgb444(uint16_t pixel)
+{
+    return make_from_rgb444((pixel >> 8) & 0xf, (pixel >> 4) & 0xf, pixel & 0xf);
+}
+
 Color Color::make_from_rgb444(uint8_t r, uint8_t g, uint8_t b)
 {
-    return Color(r * 2, g * 2, b * 2);
+    uint8_t rr = normalize_to_8bit(r);
+    uint8_t gg = normalize_to_8bit(g);
+    uint8_t bb = normalize_to_8bit(b);
+    return Color(rr, gg, bb);
 }
 
 uint16_t Color::to_rgb444() const 
 {
-    return (static_cast<uint16_t>(r_ / uint16_t(2)) << 8)
-        | (static_cast<uint16_t>(g_ / 2u) << 4)
-        | static_cast<uint16_t>(b_ / 2u);
+    uint8_t r = normalize_to_4bit(r_);
+    uint8_t g = normalize_to_4bit(g_);
+    uint8_t b = normalize_to_4bit(b_);
+    const uint16_t pixel = r << 8 | g << 4 | b;
+    return pixel;
+}
+
+uint8_t Color::normalize_to_8bit(uint8_t color) 
+{
+    return (255.0/15.0) * color;
+}
+
+uint8_t Color::normalize_to_4bit(uint8_t color) 
+{
+    return static_cast<uint8_t>(static_cast<float>(color) * 15.0 / 255.0);
 }
 
 sf::Color Color::to_sfml() const 

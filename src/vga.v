@@ -1,81 +1,102 @@
-/* This module generates VGA signal and puts data from line buffer */ 
+/* for now only 640x480@60 is supported */
 
-module vga (
-    input enable,
+/* for 640x480@60 polarity is: 
+* vsync: negative 
+* hsync: negative 
+*/
+
+module vga(
     input clock,
-    output reg[12:0] address,
-    input[11:0] data,
+    input enable, 
     output hsync,
     output vsync,
-    output reg[3:0] red,
-    output reg[3:0] green,
-    output reg[3:0] blue,
-    output wire visible_area,
-    output wire almost_visible_area,
-    output reg line_finished
+    output wire[3:0] red, 
+    output wire[3:0] green,
+    output wire[3:0] blue,
+    input buffer_clock,
+    output reg[21:0] read_address,
+    input wire[11:0] pixel_data
 );
 
-reg prepare_for_display;
+reg [9:0] hsync_counter;
+reg [9:0] vsync_counter;
 
-reg enable_buffer;
+localparam HSYNC_WHOLE_LINE = 800;
+localparam HSYNC_FRONT_PORCH = 16;
+localparam HSYNC_VISIBLE_AREA = 640;
+localparam HSYNC_PULSE = 96;
+localparam HSYNC_BACK_PORCH = 48;
 
-vga_sync sync(
-    .clock(clock),
-    .enable(enable_buffer),
-    .hsync(hsync),
-    .vsync(vsync),
-    .visible_area(visible_area)
-);
+localparam VSYNC_VISIBLE_AREA = 480;
+localparam VSYNC_FRONT_PORCH = 10;
+localparam VSYNC_SYNC_PULSE = 2;
+localparam VSYNC_BACK_PORCH = 33;
+localparam VSYNC_WHOLE_FRAME = 525;
 
-reg is_first_line;
+wire almost_line_end = (hsync_counter == HSYNC_VISIBLE_AREA + 1);
+wire line_end = (hsync_counter == HSYNC_WHOLE_LINE - 1);
+wire hsync_pulse = (hsync_counter >= (HSYNC_VISIBLE_AREA + HSYNC_FRONT_PORCH - 1) 
+    && (hsync_counter < (HSYNC_WHOLE_LINE - HSYNC_BACK_PORCH) - 1));
 
-reg [3:0] state;
-localparam STATE_FIRST_LINE = 0;
-localparam STATE_SECOND_LINE = 1;
+wire frame_end = (vsync_counter == VSYNC_WHOLE_FRAME - 1);
+wire almost_frame_end = (vsync_counter == VSYNC_WHOLE_FRAME - 2) && almost_line_end;
+wire vsync_pulse = (vsync_counter >= (VSYNC_VISIBLE_AREA + VSYNC_FRONT_PORCH - 1)
+    && (vsync_counter < (VSYNC_WHOLE_FRAME - VSYNC_BACK_PORCH) - 1));
+assign hsync = ~hsync_pulse;
+assign vsync = ~vsync_pulse;
+wire visible_area = (hsync_counter < HSYNC_VISIBLE_AREA) 
+    && (vsync_counter < VSYNC_VISIBLE_AREA);
 
-reg [2:0] hsync_buffer;
-always @(posedge clock) hsync_buffer <= {hsync_buffer[1:0], hsync};
-wire hsync_falling = (hsync_buffer[2:1] == 2'b10);
+
+reg[11:0] line_buffer[2**10-1:0];
+reg[9:0] copied;
+reg is_first;
+
+reg [1:0] almost_line_end_buffer;
+always @(posedge buffer_clock) almost_line_end_buffer <= {almost_line_end_buffer[0], almost_line_end};
+wire almost_line_end_posedge = almost_line_end_buffer == 2'b01;
+
+reg [1:0] almost_frame_end_buffer;
+always @(posedge buffer_clock) almost_frame_end_buffer <= {almost_frame_end_buffer[0], almost_frame_end};
+wire almost_frame_end_posedge = almost_frame_end_buffer == 2'b01;
+
+always @(posedge buffer_clock) begin 
+    if (copied < 640 && !almost_line_end && !almost_frame_end) begin 
+        read_address <= read_address + 1;
+        if (!is_first) begin   
+            copied <= copied + 1;
+            line_buffer[copied] <= pixel_data;
+        end
+        is_first <= 0;
+    end
+
+    if (almost_line_end_posedge) begin 
+        copied <= 0;
+        is_first <= 1;
+        read_address <= read_address - 1;
+    end
+    if (almost_frame_end_posedge) begin 
+        read_address <= 0;
+        copied <= 0;
+        is_first <= 1;
+    end
+end
+
+
+assign red = visible_area ? line_buffer[hsync_counter][11:8] : 0;
+assign green = visible_area ? line_buffer[hsync_counter][7:4] : 0;
+assign blue = visible_area ? line_buffer[hsync_counter][3:0] : 0;
 
 always @(posedge clock) begin 
-    // this must be triggered one tick before real start
-    if (enable) enable_buffer <= 1;
-    else enable_buffer <= 0;
+    if (enable) hsync_counter <= hsync_counter + 1;
+    if (line_end) hsync_counter <= 0;
+end
 
-    /*if (prepare_for_display) begin 
-        $display("Prepare");
-        red <= data[11:8];
-        green <= data[7:4];
-        blue <= data[3:0];
-
-        address <= address + 1;
-    end*/
-    if (visible_area && enable) begin 
-        address <= address + 1;
-        red <= data[11:8];
-        green <= data[7:4];
-        blue <= data[3:0];
+always @(posedge clock) begin 
+    if (frame_end) begin 
+        vsync_counter <= 0;
     end
-    line_finished <= 0;
-    if (hsync_falling) begin 
-        line_finished <= 1;
-    end
-    case (state)
-        STATE_FIRST_LINE: begin
-            if (hsync_falling) begin 
-                address <= address - 1;
-                state <= STATE_SECOND_LINE;
-            end
-        end
-        STATE_SECOND_LINE: begin 
-            if (hsync_falling) begin 
-                address <= 0;
-                state <= STATE_FIRST_LINE; 
-            end
-        end
-    endcase
+    else if (line_end) vsync_counter <= vsync_counter + 1;
 end
 
 endmodule
-
-`resetall
