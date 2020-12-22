@@ -44,7 +44,7 @@ pll vga_pll(
 // For simulation purposes //
 clock_divider vga_clock_divider(
     .clkin(clock),
-    .div(8),
+    .div(4),
     .clkout(vga_clock)
 );
 

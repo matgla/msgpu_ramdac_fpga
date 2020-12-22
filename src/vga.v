@@ -38,7 +38,7 @@ wire line_end = (hsync_counter == HSYNC_WHOLE_LINE - 1);
 wire hsync_pulse = (hsync_counter >= (HSYNC_VISIBLE_AREA + HSYNC_FRONT_PORCH - 1) 
     && (hsync_counter < (HSYNC_WHOLE_LINE - HSYNC_BACK_PORCH) - 1));
 
-wire frame_end = (vsync_counter == VSYNC_WHOLE_FRAME - 1);
+wire frame_end = (vsync_counter == VSYNC_WHOLE_FRAME - 2) && line_end;
 wire almost_frame_end = (vsync_counter == VSYNC_WHOLE_FRAME - 2) && almost_line_end;
 wire vsync_pulse = (vsync_counter >= (VSYNC_VISIBLE_AREA + VSYNC_FRONT_PORCH - 1)
     && (vsync_counter < (VSYNC_WHOLE_FRAME - VSYNC_BACK_PORCH) - 1));
@@ -66,6 +66,8 @@ always @(posedge buffer_clock) begin
         if (!is_first) begin   
             copied <= copied + 1;
             line_buffer[copied] <= pixel_data;
+        if (enable && (copied < 5 || copied > 630))
+        $display("Line buffer[%d] = %x", copied, pixel_data);
         end
         is_first <= 0;
     end
@@ -88,15 +90,26 @@ assign green = visible_area ? line_buffer[hsync_counter][7:4] : 0;
 assign blue = visible_area ? line_buffer[hsync_counter][3:0] : 0;
 
 always @(posedge clock) begin 
-    if (enable) hsync_counter <= hsync_counter + 1;
-    if (line_end) hsync_counter <= 0;
+    if (enable) begin 
+        if (vsync_counter < 3 && hsync_counter < 10)
+        $display("[%d][%d] <= %x%x%x (%x)", vsync_counter, hsync_counter, red, green, blue, line_buffer[hsync_counter]);
+    end
 end
 
 always @(posedge clock) begin 
     if (frame_end) begin 
         vsync_counter <= 0;
+        $display("VSYNC: %d", hsync_counter);
     end
     else if (line_end) vsync_counter <= vsync_counter + 1;
+end
+
+always @(posedge clock) begin 
+    if (enable) hsync_counter <= hsync_counter + 1;
+    if (line_end) begin 
+        hsync_counter <= 0;
+        if (vsync_counter >= 523) $display("Line end");
+    end
 end
 
 endmodule

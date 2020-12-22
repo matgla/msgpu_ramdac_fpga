@@ -17,6 +17,8 @@ protected:
     {
         sut_->clkin = 1;
         sut_->eval();
+        sut_->clkin = 0; 
+        sut_->eval();
     }
 
     void fall()
@@ -35,15 +37,11 @@ TEST_F(ClockDividerShould, DivideBy1)
     EXPECT_FALSE(sut_->clkout);
     raise();
     EXPECT_TRUE(sut_->clkout);
-    fall();
+    raise();
     EXPECT_FALSE(sut_->clkout);
     raise();
     EXPECT_TRUE(sut_->clkout);
-    fall();
-    EXPECT_FALSE(sut_->clkout);
     raise();
-    EXPECT_TRUE(sut_->clkout);
-    fall();
     EXPECT_FALSE(sut_->clkout);
 }
 
@@ -53,28 +51,17 @@ TEST_F(ClockDividerShould, DivideBy2)
     sut_->div = 2;
     EXPECT_FALSE(sut_->clkout);
     raise();
-    fall();
     raise();
     EXPECT_TRUE(sut_->clkout);
-    fall();
     raise();
-    fall();
+    EXPECT_TRUE(sut_->clkout);
+    raise();
     EXPECT_FALSE(sut_->clkout);
     raise();
-    fall();
     raise();
     EXPECT_TRUE(sut_->clkout);
-    fall();
     raise();
-    fall();
-    EXPECT_FALSE(sut_->clkout);
     raise();
-    fall();
-    raise();
-    EXPECT_TRUE(sut_->clkout);
-    fall();
-    raise();
-    fall();
     EXPECT_FALSE(sut_->clkout);
 }
 
@@ -84,39 +71,27 @@ TEST_F(ClockDividerShould, DivideBy3)
     sut_->div = 3;
     EXPECT_FALSE(sut_->clkout);
     raise();
-    fall();
     raise();
-    fall();
     raise();
     EXPECT_TRUE(sut_->clkout);
-    fall();
     raise();
-    fall();
     raise();
-    fall();
+    raise();
     EXPECT_FALSE(sut_->clkout);
     raise();
-    fall();
     raise();
-    fall();
     raise();
     EXPECT_TRUE(sut_->clkout);
-    fall();
     raise();
-    fall();
     raise();
-    fall();
+    raise();
     EXPECT_FALSE(sut_->clkout);
     raise();
-    fall();
     raise();
-    fall();
     raise();
     EXPECT_TRUE(sut_->clkout);
-    fall();
     raise();
-    fall();
     raise();
-    fall();
+    raise();
     EXPECT_FALSE(sut_->clkout);
 }

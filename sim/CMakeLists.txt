@@ -35,7 +35,7 @@ verilate(msgpu_simulation
     INCLUDE_DIRS "${verilog_sources};${verilog_sources}/pll;${verilog_sources}/osc"
     SOURCES ${verilog_sources}/msgpu.v
     TOP_MODULE msgpu
-    VERILATOR_ARGS --threads 1 -Wall -Wpedantic 
+    VERILATOR_ARGS --trace --threads 1 -Wall -Wpedantic 
 )
 
 target_compile_options(msgpu_simulation 

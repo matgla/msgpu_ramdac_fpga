@@ -44,12 +44,12 @@ void MsgpuSimulation::do_tick()
     circuit_->clock = 1; 
     circuit_->eval();
 
-    mcu_interface_.process(tick_counter_, circuit_->mcu_bus, circuit_->mcu_bus_clock, circuit_->mcu_bus_command_data);
-    vga_interface_.process(tick_counter_);
-
     circuit_->clock = 0; 
     circuit_->eval();
-   
+  
+    mcu_interface_.process(tick_counter_, circuit_->mcu_bus, circuit_->mcu_bus_clock, circuit_->mcu_bus_command_data);
+    vga_interface_.process(tick_counter_);
+  
     ++tick_counter_;
 }
 

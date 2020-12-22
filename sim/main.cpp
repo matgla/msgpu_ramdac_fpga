@@ -48,18 +48,20 @@ int main(int argc, char *argv[])
     
     auto frame = loader.get_frame(0);
     auto thread = std::thread([&frame, &simulation](){
-        simulation.send_frame(frame);
-//        for (int y = 0; y < 480; ++y) 
-//        {
-//            for (int x = 0; x < 640; ++x) 
-//            {
-//                if (x == 0) simulation.send_pixel(0xfff);
-//                else if (x == 639) simulation.send_pixel(0xff0);
-//                else if (y == 0) simulation.send_pixel(0xf00);
-//                else if (y == 479) simulation.send_pixel(0x00f);
-//                else simulation.send_pixel(0x000);
-//            }
-//        }
+//        simulation.send_frame(frame);
+        for (int y = 0; y < 480; ++y) 
+        {
+            for (int x = 0; x < 640; ++x) 
+            {
+                //simulation.send_pixel(x);
+                if (x == 0) simulation.send_pixel(0xfff);
+                //if (x == 2) simulation.send_pixel(0xfff);
+                else if (x == 639) simulation.send_pixel(0xff0);
+                else if (y == 0) simulation.send_pixel(0xf00);
+                else if (y == 479) simulation.send_pixel(0x00f);
+                else simulation.send_pixel(0x000);
+            }
+        }
     });
 
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));

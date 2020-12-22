@@ -11,7 +11,6 @@ target_sources(msgpu_ramdac_tests
         ${CMAKE_CURRENT_SOURCE_DIR}/gated_clock_tests.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/psram_tests.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/mcu_bus_tests.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/fifo_tests.cpp
 )
 
 verilate(msgpu_ramdac_tests
@@ -26,15 +25,11 @@ verilate(msgpu_ramdac_tests
   INCLUDE_DIRS "${verilog_sources};${verilog_sources}/pll;${verilog_sources}/osc"
   SOURCES ${verilog_sources}/mcu_bus.v)
 
-
 verilate(msgpu_ramdac_tests
-  INCLUDE_DIRS "${verilog_sources};${verilog_sources}/pll;${verilog_sources}/osc"
-  SOURCES ${verilog_sources}/clock_divider.v)
-
-verilate(msgpu_ramdac_tests
-  INCLUDE_DIRS "${verilog_sources};${verilog_sources}/pll;${verilog_sources}/osc"
-  SOURCES ${verilog_sources}/fifo.v)
-
+    INCLUDE_DIRS "${verilog_sources};${verilog_sources}/pll;${verilog_sources}/osc"
+    SOURCES ${verilog_sources}/clock_divider.v
+    VERILATOR_ARGS --trace -Wall -Wpedantic
+)
 
 target_link_libraries(msgpu_ramdac_tests
     PRIVATE

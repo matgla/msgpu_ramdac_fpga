@@ -7,24 +7,13 @@ module clock_divider(
 
 reg[7:0] counter = 8'h0;
 
-always @(posedge clkin or negedge clkin) begin
-    if (clkin) begin
-        if (counter + 8'd1 >= div) begin
-            if (clkout == 1'b0) begin
-                clkout <= 1'b1;
-            end
-        end
+always @(posedge clkin) begin
+    counter <= counter + 1;
+    if (counter >= div - 1) begin 
+        counter <= 0;
     end
-    else begin
-        if (counter + 8'd1 >= div) begin
-            if (clkout == 1'b1) begin
-                clkout <= 1'b0;
-                counter <= 0;
-            end
-        end else begin
-            counter <= counter + 1;
-        end
-    end
+
+    clkout <= (counter < div / 2) ? 1 : 0;
 end
 
 endmodule
