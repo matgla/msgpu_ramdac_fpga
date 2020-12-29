@@ -96,9 +96,11 @@ pixel_memory pixel_memory(
 /********************************/
 /********************************/
 reg vga_enable;
+reg vga_reset; 
 
 vga vga_instance(
     /* verilator lint_off IMPLICIT */
+    .reset(vga_reset),
     .clock(vga_clock),
     .enable(vga_enable),
     .hsync(hsync),
@@ -126,6 +128,7 @@ always @(posedge system_clock) begin
         STATE_INITIALIZATION: begin 
             $display("Initialization");
             counter <= 0;
+            vga_reset <= 0;
             state <= STATE_WAITING_FOR_INITIALIZATION;
         end
         STATE_WAITING_FOR_INITIALIZATION: begin 
@@ -135,11 +138,13 @@ always @(posedge system_clock) begin
                     $display("Waiting for VGA start");
                     counter <= 0;
                     state <= STATE_START_FIFO_SYNC;
+                    vga_reset <= 1;
                 end
             end
         end
         STATE_START_FIFO_SYNC: begin 
             state <= STATE_WAITING_FOR_START_VGA;
+            vga_reset <= 0;
         end
         STATE_WAITING_FOR_START_VGA: begin 
             if (counter == 7) begin 

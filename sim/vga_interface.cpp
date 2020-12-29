@@ -95,7 +95,6 @@ void VgaInterface::process_vga_tick()
         {
             if (vga_ticks_ >= hsync_back_porch) 
             {
-                std::cerr << "HSYNC: finished with: " << vga_ticks_ << std::endl;
                 state_ = State::Display;
                 vga_ticks_ = 0;
                 ++line_;
@@ -110,8 +109,7 @@ void VgaInterface::process_vga_tick()
             if (is_hsync_posedge())
             {
                 ++vsync_stamp_; 
-                std::cerr << "VSYNC: wait: " << vsync_stamp_ << std::endl; 
-                if (vsync_stamp_ >= 33) 
+                if (vsync_stamp_ >= 34) 
                 {
                     static int frame = 0;
                     if (on_vsync_) 
@@ -129,11 +127,6 @@ void VgaInterface::process_vga_tick()
         {
             if (on_pixel_) 
             {
-                if (line_ < 4 && (vga_ticks_ < 5 || vga_ticks_ > 630))
-                {
-                    std::cerr << "dis[" << line_ << "][" << vga_ticks_ << "]: " << std::hex 
-                        << static_cast<int>(red_) << static_cast<int>(green_) << static_cast<int>(blue_) << std::dec << std::endl;
-                }
                 on_pixel_(red_, green_, blue_);
             }
 
@@ -155,7 +148,6 @@ void VgaInterface::process_vga_tick()
             if (is_hsync_posedge()) 
             {
                 state_ = State::Hsync;
-                std::cerr << "HSYNC_POSEDGE" << std::endl;
                 vga_ticks_ = 0;
             }
         } break;
@@ -163,7 +155,6 @@ void VgaInterface::process_vga_tick()
         {
             if (is_vsync_posedge())
             {
-                std::cerr << "VSYNC_POSEDGE" << std::endl;
                 state_ = State::Vsync;
                 vga_ticks_ = 0;
                 vsync_stamp_ = 0;

@@ -84,39 +84,39 @@ protected:
     std::unique_ptr<Vmcu_bus> sut_;
 };
 
-TEST_F(MCUBusTests, WriteSomeData)
-{
-    tick();
-    sut_->bus_in = 0x01;
-    send_sclk();
-    constexpr int msgpu_id = 0xae;
-    EXPECT_EQ(msgpu_id, get_byte());
-    set_data();
-    sut_->bus_in = 0x12;
-    raise_sclk();
-    tick();
-    tick();
-    fall_sclk();
-    tick();
-    tick();
-    EXPECT_TRUE(sut_->dataclk);
-    tick();
-    EXPECT_FALSE(sut_->dataclk);
+//TEST_F(MCUBusTests, WriteSomeData)
+//{
+//    tick();
+//    sut_->bus_in = 0x01;
+//    send_sclk();
+//    constexpr int msgpu_id = 0xae;
+//    EXPECT_EQ(msgpu_id, get_byte());
+//    set_data();
+//    sut_->bus_in = 0x12;
+//    raise_sclk();
+//    tick();
+//    tick();
+//    fall_sclk();
+//    tick();
+//    tick();
+//    EXPECT_TRUE(sut_->dataclk);
+//    tick();
+//    EXPECT_FALSE(sut_->dataclk);
 
-    EXPECT_EQ(0x12, get_data_byte());
-    send_byte(0x34);
-    EXPECT_EQ(0x34, get_data_byte());
-}
+//    EXPECT_EQ(0x12, get_data_byte());
+//    send_byte(0x34);
+//    EXPECT_EQ(0x34, get_data_byte());
+//}
 
-TEST_F(MCUBusTests, WriteAddress)
-{
-    tick();
-    sut_->bus_in = 0x02;
-    set_command();
-    send_sclk();
-    send_byte(0x12);
-    send_byte(0x34);
-    send_byte(0x56);
-    send_byte(0x78);
-    EXPECT_EQ(0x12345678, sut_->address);
-}
+//TEST_F(MCUBusTests, WriteAddress)
+//{
+//    tick();
+//    sut_->bus_in = 0x02;
+//    set_command();
+//    send_sclk();
+//    send_byte(0x12);
+//    send_byte(0x34);
+//    send_byte(0x56);
+//    send_byte(0x78);
+//    EXPECT_EQ(0x12345678, sut_->address);
+//}

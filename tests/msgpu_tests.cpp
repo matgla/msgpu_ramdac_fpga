@@ -83,7 +83,7 @@ protected:
 
     void send_vga_tick()
     {
-        for (int i = 0; i < 8; ++i)
+        for (int i = 0; i < 4; ++i)
         {
             tick();
         }
@@ -176,7 +176,6 @@ protected:
         // handle vsync 
     }
 
-
     frame_type generate_frame()
     {
         frame_type frame(480);
@@ -185,7 +184,7 @@ protected:
             line.reserve(640);
         }
        
-        uint16_t starting_pixel = 0;
+        uint16_t starting_pixel = 5;
         for (int i = 0; i < 480; i++)
         {
             if (starting_pixel > 3000) 
@@ -196,6 +195,26 @@ protected:
             starting_pixel += 480;
         }
         return frame;
+    }
+
+    void process_vsync()
+    {
+        for (int i = 0; i < 10; ++i) // vsync front porch 
+        {
+            get_line();
+        }
+        EXPECT_FALSE(sut_->vsync);
+        for (int i = 0; i < 2; ++i) // vsync sync pulse 
+        {
+            get_line();
+        }
+
+        EXPECT_TRUE(sut_->vsync);
+        for (int i = 0; i < 33; ++i) // vsync back porch 
+        {
+            get_line();
+            EXPECT_TRUE(sut_->vsync);
+        }
     }
 
     uint8_t bus_state_;
@@ -227,20 +246,29 @@ TEST_F(MsgpuShould, WriteDataToPsram)
     tick();
 }
 
-TEST_F(MsgpuShould, SendDataToPsram)
+TEST_F(MsgpuShould, DisplayFrame)
 {
     tick();
-    
     auto frame = generate_frame();
     send_frame(frame);
     send_vga_tick();
     send_vga_tick();
     send_command(0x02);
-    synchronize_clock(8); // synchronize to vga clock
-    send_vga_tick(); // 1 tick delay
+    send_vga_tick();
     auto displayed_frame = get_frame();
     for (int i = 0; i < 480; i++)
     {
         EXPECT_THAT(frame[i], ::testing::ElementsAreArray(displayed_frame[i]));
     }
+    process_vsync();
+    auto line = get_line();
+    for (int i = 0; i < 5; ++i)
+    {
+        std::cerr << i << ": " << line[i] << std::endl;
+    }
+    //displayed_frame = get_frame();
+    //for (int i = 0; i < 480; i++)
+   // {
+   //     EXPECT_THAT(frame[i], ::testing::ElementsAreArray(displayed_frame[i]));
+   // }
 }

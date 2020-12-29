@@ -17,8 +17,6 @@ protected:
     {
         sut_->clkin = 1;
         sut_->eval();
-        sut_->clkin = 0; 
-        sut_->eval();
     }
 
     void fall()
@@ -27,71 +25,67 @@ protected:
         sut_->eval();
     }
 
+    void tick()
+    {
+        sut_->clkin = 1;
+        sut_->eval();
+        sut_->clkin = 0;
+        sut_->eval();
+    }
+
     std::unique_ptr<Vclock_divider> sut_;
 };
-
-TEST_F(ClockDividerShould, DivideBy1)
-{
-    sut_->eval();
-    sut_->div = 1;
-    EXPECT_FALSE(sut_->clkout);
-    raise();
-    EXPECT_TRUE(sut_->clkout);
-    raise();
-    EXPECT_FALSE(sut_->clkout);
-    raise();
-    EXPECT_TRUE(sut_->clkout);
-    raise();
-    EXPECT_FALSE(sut_->clkout);
-}
 
 TEST_F(ClockDividerShould, DivideBy2)
 {
     sut_->eval();
     sut_->div = 2;
     EXPECT_FALSE(sut_->clkout);
-    raise();
+    tick();
+    tick();
     raise();
     EXPECT_TRUE(sut_->clkout);
+    fall();
+    EXPECT_TRUE(sut_->clkout);
+    tick();
+    EXPECT_FALSE(sut_->clkout);
+    tick();
+    tick();
     raise();
     EXPECT_TRUE(sut_->clkout);
+    fall();
+    tick();
+    tick();
     raise();
     EXPECT_FALSE(sut_->clkout);
-    raise();
-    raise();
-    EXPECT_TRUE(sut_->clkout);
-    raise();
-    raise();
-    EXPECT_FALSE(sut_->clkout);
+    fall();
 }
 
-TEST_F(ClockDividerShould, DivideBy3)
+TEST_F(ClockDividerShould, DivideBy4)
 {
     sut_->eval();
-    sut_->div = 3;
+    sut_->div = 4;
     EXPECT_FALSE(sut_->clkout);
     raise();
-    raise();
-    raise();
     EXPECT_TRUE(sut_->clkout);
-    raise();
-    raise();
+    fall();
+    tick();
     raise();
     EXPECT_FALSE(sut_->clkout);
-    raise();
-    raise();
+    fall();
+    tick();
     raise();
     EXPECT_TRUE(sut_->clkout);
-    raise();
-    raise();
+    fall();
+    tick();
     raise();
     EXPECT_FALSE(sut_->clkout);
-    raise();
-    raise();
+    fall();
+    tick();
     raise();
     EXPECT_TRUE(sut_->clkout);
-    raise();
-    raise();
+    fall();
+    tick();
     raise();
     EXPECT_FALSE(sut_->clkout);
 }
