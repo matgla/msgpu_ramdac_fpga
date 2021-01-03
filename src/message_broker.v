@@ -5,12 +5,12 @@ module message_broker(
     input mcu_bus_command_data, 
     output reg mcu_pixel_clock,
     output mcu_command_clock,
-    output[11:0] pixel_data 
+    output reg[11:0] pixel_data 
 );
 
-reg[31:0] mcu_address;
-reg[7:0] mcu_data; 
-reg mcu_data_clock;
+wire[31:0] mcu_address;
+wire[7:0] mcu_data; 
+wire mcu_data_clock;
 
 mcu_bus mcu(
     .sysclk(system_clock),
@@ -28,7 +28,7 @@ localparam STATE_RECEIVE_FIRST_PART = 0;
 localparam STATE_RECEIVE_SECOND_PART = 1; 
 
 reg[2:0] state;
-always @(posedge mcu_data_clock) begin 
+always @(posedge mcu_bus_clock) begin 
     mcu_pixel_clock <= 0; 
     case (state) 
         STATE_RECEIVE_FIRST_PART: begin 
@@ -43,7 +43,7 @@ always @(posedge mcu_data_clock) begin
     endcase
 end
 
-always @(posedge mcu_data_clock) begin 
+always @(posedge mcu_bus_clock) begin 
     if (mcu_data_clock == 0) begin 
         $display("GOT address: %x", mcu_address);
     end

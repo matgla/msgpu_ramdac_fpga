@@ -109,7 +109,7 @@ void VgaInterface::process_vga_tick()
             if (is_hsync_posedge())
             {
                 ++vsync_stamp_; 
-                if (vsync_stamp_ >= 34) 
+                if (vsync_stamp_ >= 33) 
                 {
                     static int frame = 0;
                     if (on_vsync_) 

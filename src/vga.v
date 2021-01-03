@@ -40,7 +40,7 @@ wire hsync_pulse = (hsync_counter >= (HSYNC_VISIBLE_AREA + HSYNC_FRONT_PORCH - 1
     && (hsync_counter < (HSYNC_WHOLE_LINE - HSYNC_BACK_PORCH) - 1));
 
 wire frame_end = (vsync_counter == VSYNC_WHOLE_FRAME - 1);// && line_end;
-wire almost_frame_end = (vsync_counter == VSYNC_WHOLE_FRAME - 1) && almost_line_end;
+wire almost_frame_end = (vsync_counter == VSYNC_WHOLE_FRAME - 2) && (hsync_counter == HSYNC_WHOLE_LINE - 1);
 wire vsync_pulse = (vsync_counter >= (VSYNC_VISIBLE_AREA + VSYNC_FRONT_PORCH - 1)
     && (vsync_counter < (VSYNC_WHOLE_FRAME - VSYNC_BACK_PORCH) - 1));
 assign hsync = ~hsync_pulse;
@@ -77,13 +77,14 @@ always @(posedge buffer_clock or posedge reset) begin
     end
 
     if (almost_line_end_posedge) begin 
-        copied <= 0;
+        //copied <= 0;
         is_first <= 1;
-        read_address <= read_address - 1;
+        //read_address <= read_address - 1;
     end
     if (almost_frame_end_posedge) begin 
-        read_address <= 0;
-        copied <= 0;
+        $display("VSYNC reset");
+        //read_address <= 0;
+        //copied <= 0;
         is_first <= 1;
     end
 end
@@ -92,6 +93,10 @@ end
 assign red = visible_area ? line_buffer[hsync_counter][11:8] : 0;
 assign green = visible_area ? line_buffer[hsync_counter][7:4] : 0;
 assign blue = visible_area ? line_buffer[hsync_counter][3:0] : 0;
+
+always @(posedge clock) begin 
+    if (vsync_counter == 0 && hsync_counter < 10 && enable) $display("Read address: %d -> %x" , read_address, line_buffer[hsync_counter]);
+end
 
 always @(posedge clock) begin 
     if (frame_end) begin 

@@ -1,11 +1,15 @@
 set_device GW1N-LV1QN48C6/I5
 add_file src/msgpu.v
 add_file src/mcu_bus.v
+add_file src/clock_divider.v
+add_file src/message_broker.v
+add_file src/pixel_memory.v
 add_file src/vga.v
 add_file src/osc/osc.v
 add_file src/pll/pll.v
 add_file src/msgpu.cst
 add_file src/psram_frame_buffer.cst
+add_file src/dual_port_ram.v 
 
 set_option -synthesis_tool synplify_pro
 set_option -top_module msgpu
