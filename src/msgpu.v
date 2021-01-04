@@ -13,7 +13,7 @@ module msgpu (
     output led,
     output psram_ce_n,
     output psram_clk,
-    inout reg[3:0] psram_sio
+    inout wire[3:0] psram_sio
 );
 
 /*****************************/
@@ -65,7 +65,7 @@ assign system_clock = clock;
 
 wire message_pixel_clock;
 wire message_command_clock;
-reg[11:0] pixel_data;
+wire[11:0] pixel_data;
 
 message_broker broker(
     .system_clock(system_clock),
@@ -77,9 +77,9 @@ message_broker broker(
     .pixel_data(pixel_data)
 );
 
-reg[21:0] framebuffer_read_pointer;
+wire[21:0] framebuffer_read_pointer;
 
-reg [11:0] read_data;
+wire[11:0] read_data;
 
 
 pixel_memory pixel_memory(
@@ -98,9 +98,11 @@ pixel_memory pixel_memory(
 reg vga_enable;
 reg vga_reset; 
 
+wire vga_reset_sig = vga_reset;
+
 vga vga_instance(
     /* verilator lint_off IMPLICIT */
-    .reset(vga_reset),
+    .reset(vga_reset_sig),
     .clock(vga_clock),
     .enable(vga_enable),
     .hsync(hsync),

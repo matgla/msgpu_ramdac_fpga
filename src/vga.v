@@ -71,20 +71,21 @@ always @(posedge buffer_clock or posedge reset) begin
         read_address <= read_address + 1;
         if (!is_first) begin   
             copied <= copied + 1;
+            if (copied < 4) $display("DAA: %d", pixel_data);
             line_buffer[copied] <= pixel_data;
-        end
-        is_first <= 0;
+            is_first <= 0;
+        end  
     end
 
     if (almost_line_end_posedge) begin 
-        //copied <= 0;
+        copied <= 0;
         is_first <= 1;
-        //read_address <= read_address - 1;
+        read_address <= read_address - 1;
     end
     if (almost_frame_end_posedge) begin 
         $display("VSYNC reset");
-        //read_address <= 0;
-        //copied <= 0;
+        read_address <= 0;
+        copied <= 0;
         is_first <= 1;
     end
 end

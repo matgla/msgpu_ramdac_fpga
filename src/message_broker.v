@@ -44,8 +44,8 @@ always @(posedge mcu_bus_clock) begin
 end
 
 always @(posedge mcu_bus_clock) begin 
-    if (mcu_data_clock == 0) begin 
-        $display("GOT address: %x", mcu_address);
+    if (mcu_data_clock == 0 && mcu_address == 10) begin 
+//        $display("GOT address: %x", mcu_address);
     end
 end
 

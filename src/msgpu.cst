@@ -50,3 +50,7 @@ IO_LOC "mcu_bus[6]" 13;
 IO_PORT "mcu_bus[6]" IO_TYPE=LVCMOS33;
 IO_LOC "mcu_bus[7]" 5;
 IO_PORT "mcu_bus[7]" IO_TYPE=LVCMOS33;
+IO_LOC "psram_ce_n" 19;
+IO_PORT "psram_ce_n" IO_TYPE=LVCMOS33;
+IO_LOC "psram_clk" 20;
+IO_PORT "psram_clk" IO_TYPE=LVCMOS33;
