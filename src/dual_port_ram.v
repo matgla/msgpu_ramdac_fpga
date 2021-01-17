@@ -11,16 +11,16 @@ module dual_port_ram #(
     output reg [DATA_WIDTH-1:0] output_data
 );
 
-reg [DATA_WIDTH-1:0] memory [2**ADDRESS_SIZE-1:0];
+//reg [DATA_WIDTH-1:0] memory [2**ADDRESS_SIZE-1:0];
 
 always @(posedge write_clock) begin
     if (write_enable) begin
-        memory[write_address] <= data;
+        //memory[write_address] <= data;
     end
 end
 
 always @(posedge read_clock) begin
-    output_data <= memory[read_address];
+    output_data <= 0;// memory[read_address];
 end
 
 

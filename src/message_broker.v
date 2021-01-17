@@ -28,7 +28,7 @@ localparam STATE_RECEIVE_FIRST_PART = 0;
 localparam STATE_RECEIVE_SECOND_PART = 1; 
 
 reg[2:0] state;
-always @(posedge mcu_bus_clock) begin 
+always @(posedge mcu_data_clock) begin 
     mcu_pixel_clock <= 0; 
     case (state) 
         STATE_RECEIVE_FIRST_PART: begin 
@@ -43,7 +43,7 @@ always @(posedge mcu_bus_clock) begin
     endcase
 end
 
-always @(posedge mcu_bus_clock) begin 
+always @(posedge mcu_command_clock) begin 
     if (mcu_data_clock == 0 && mcu_address == 10) begin 
 //        $display("GOT address: %x", mcu_address);
     end

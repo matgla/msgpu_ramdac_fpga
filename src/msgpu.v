@@ -134,15 +134,15 @@ always @(posedge system_clock) begin
             state <= STATE_WAITING_FOR_INITIALIZATION;
         end
         STATE_WAITING_FOR_INITIALIZATION: begin 
-            if (message_command_clock) begin 
+           // if (message_command_clock) begin 
                 $display("Command: %d", mcu_bus);
-                if (mcu_bus == 8'd2) begin 
+                //if (mcu_bus == 8'd2) begin 
                     $display("Waiting for VGA start");
                     counter <= 0;
                     state <= STATE_START_FIFO_SYNC;
                     vga_reset <= 1;
-                end
-            end
+               // end
+            //end
         end
         STATE_START_FIFO_SYNC: begin 
             state <= STATE_WAITING_FOR_START_VGA;

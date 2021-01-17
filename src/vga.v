@@ -5,15 +5,19 @@
 * hsync: negative 
 */
 
-module vga(
+module vga #(
+    parameter RED_BITS = 3, 
+    parameter GREEN_BITS = 3, 
+    parameter BLUE_BITS = 3
+)(
     input reset,
     input clock,
     input enable, 
     output hsync,
     output vsync,
-    output wire[3:0] red, 
-    output wire[3:0] green,
-    output wire[3:0] blue,
+    output wire[RED_BITS:0] red, 
+    output wire[GREEN_BITS:0] green,
+    output wire[BLUE_BITS:0] blue,
     input buffer_clock,
     output reg[21:0] read_address,
     input wire[11:0] pixel_data
@@ -67,14 +71,16 @@ always @(posedge buffer_clock or posedge reset) begin
         is_first <= 1;
         read_address <= 0;
     end
+    else begin 
     if (copied < 640 && !almost_line_end && !almost_frame_end) begin 
         read_address <= read_address + 1;
         if (!is_first) begin   
             copied <= copied + 1;
-            if (copied < 4) $display("DAA: %d", pixel_data);
             line_buffer[copied] <= pixel_data;
+        end 
+        else begin 
             is_first <= 0;
-        end  
+        end
     end
 
     if (almost_line_end_posedge) begin 
@@ -83,21 +89,24 @@ always @(posedge buffer_clock or posedge reset) begin
         read_address <= read_address - 1;
     end
     if (almost_frame_end_posedge) begin 
-        $display("VSYNC reset");
         read_address <= 0;
         copied <= 0;
         is_first <= 1;
     end
 end
-
-
-assign red = visible_area ? line_buffer[hsync_counter][11:8] : 0;
-assign green = visible_area ? line_buffer[hsync_counter][7:4] : 0;
-assign blue = visible_area ? line_buffer[hsync_counter][3:0] : 0;
-
-always @(posedge clock) begin 
-    if (vsync_counter == 0 && hsync_counter < 10 && enable) $display("Read address: %d -> %x" , read_address, line_buffer[hsync_counter]);
 end
+
+
+//assign red = visible_area ? line_buffer[hsync_counter][11:8] : 0;
+//assign green = visible_area ? line_buffer[hsync_counter][7:4] : 0;
+//assign blue = visible_area ? line_buffer[hsync_counter][3:0] : 0;
+
+assign red = visible_area && 
+    (hsync_counter >= 0 && hsync_counter <= 210) ? 3'b111 : 0;
+assign green = visible_area && 
+    (hsync_counter > 210 && hsync_counter <= 420) ? 3'b111 : 0;
+assign blue = visible_area && 
+    (hsync_counter > 420 && hsync_counter < 640) ? 2'b11 : 0;
 
 always @(posedge clock) begin 
     if (frame_end) begin 
@@ -112,9 +121,5 @@ always @(posedge clock) begin
         hsync_counter <= 0;
     end
 end
-
-//always @(posedge clock) begin 
-//    if (enable && hsync_counter < 5 && vsync_counter == 0) $display("Hsync %d: %x%x%x", hsync_counter, red, green, blue);
-//end
 
 endmodule

@@ -12,6 +12,19 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(mspkg)
 
+string(REPLACE ":" ";" BOARD ${BOARD})
+
+foreach (element ${BOARD})
+    if (element STREQUAL "elbert_v2")
+        message (STATUS "Configuring project for: Elbert V2")
+        add_subdirectory(boards/elbert_v2)
+    endif ()
+
+    if (element STREQUAL "tangnano") 
+        message (STATUS "Configuring project for: Tang Nano")
+        add_subdirectory(boards/tangnano)
+    endif ()
+endforeach ()
 
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${mspkg_SOURCE_DIR}/cmake)
 include (mspkg)
@@ -22,5 +35,10 @@ include(CTest)
 
 set (verilog_sources ${PROJECT_SOURCE_DIR}/src)
 
-add_subdirectory(sim)
-add_subdirectory(tests)
+if (NOT DISABLE_SIMULATION)
+    add_subdirectory(sim)
+endif ()
+
+if (NOT DISABLE_TESTS)
+    add_subdirectory(tests)
+endif ()
