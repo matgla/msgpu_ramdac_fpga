@@ -1,11 +1,16 @@
 module top(
     input clock, 
     output wire led,
+    /* VGA */ 
     output wire hsync,
     output wire vsync,
     output wire[3:0] vga_red,
     output wire[3:0] vga_green,
-    output wire[3:0] vga_blue
+    output wire[3:0] vga_blue,
+    /* VGA END */
+    input wire mcu_bus_clock,
+    input wire [7:0] mcu_bus,
+    input wire mcu_bus_command_data
 );
 
 wire system_clock; // 201.6 MHz 
@@ -31,7 +36,10 @@ msgpu_instance(
     .vga_hsync(hsync),
     .vga_red(vga_red),
     .vga_green(vga_green),
-    .vga_blue(vga_blue)
+    .vga_blue(vga_blue),
+    .mcu_bus_clock(mcu_bus_clock),
+    .mcu_bus(mcu_bus),
+    .mcu_bus_command_data(mcu_bus_command_data)
 );
 
 endmodule

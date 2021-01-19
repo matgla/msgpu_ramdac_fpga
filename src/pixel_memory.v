@@ -1,15 +1,18 @@
-module pixel_memory(
+module #(
+    parameter ADDRESS_SIZE = 16,
+    parameter DATA_WITH = 8
+) pixel_memory (
     input system_clock,
-    input[11:0] pixel_data, 
+    input[DATA_WIDTH - 1:0] pixel_data, 
     input pixel_clock, 
-    input[21:0] framebuffer_read_pointer,
-    output[11:0] read_data
+    input[ADDRESS_SIZE - 1:0] framebuffer_read_pointer,
+    output[DATA_WIDTH - 1:0] read_data
 );
 
-reg[21:0] framebuffer_write_pointer;
+reg[ADDRESS_SIZE-1:0] framebuffer_write_pointer;
 reg framebuffer_write_enable;
 
-dual_port_ram #(.DATA_WIDTH(12), .ADDRESS_SIZE(22))
+dual_port_ram #(.DATA_WIDTH(DATA_WIDTH), .ADDRESS_SIZE(ADDRESS_SIZE))
 ram_buffer(
    .data(pixel_data),
    .read_address(framebuffer_read_pointer),

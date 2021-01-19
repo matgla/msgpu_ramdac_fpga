@@ -19,5 +19,6 @@ add_custom_target(
         -it pepijndevos/apicula /bin/bash -c 
         "apt update && apt -y install kmod; /usr/src/gowin/Programmer/bin/programmer_cli -d GW1N-1 -r2 -f /var/binary/project.fs"
     VERBATIM
+    DEPENDS tangnano
 )
 

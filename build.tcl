@@ -2,6 +2,7 @@ global project_sources
 set project_sources {
     src/msgpu_new.v
     src/vga.v
+    src/mcu_bus.v
 }
 
 proc print_greeting {} {

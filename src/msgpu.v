@@ -65,7 +65,7 @@ assign system_clock = clock;
 
 wire message_pixel_clock;
 wire message_command_clock;
-wire[11:0] pixel_data;
+wire[7:0] pixel_data;
 
 message_broker broker(
     .system_clock(system_clock),
