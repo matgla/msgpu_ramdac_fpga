@@ -74,14 +74,15 @@ reg [22:0] counter;
 reg [63:0] buffer;
 
 always @(posedge mcu_data_clock) begin 
-    //led <= mcu_data == 8'h12 ? 0 : 1;
-    //if (mcu_data == 8'h12) led = 0;
+    //..led <= mcu_data == 8'h12 ? 0 : 1;
+    //if (mcu_data == 8'h0f) led = ~led;
     //if (mcu_data == 0) led = 1;
     //if (mcu_data == 8'h00) led = 1;
     //else if (mcu_data == 8'hf0) led = 0;
     //led <= ~led;
-    buffer <= { buffer[39:0], mcu_data };
-    if (buffer == 72'h0ff0ab12) led <= ~led;
+    buffer <= { buffer[31:0], mcu_data };
+    //if (buffer == 16'h0ff0) led <= ~led;
+    if (buffer == 32'h0ff0ab12) led <= ~led;
 end
 
 //always @(posedge system_clock) begin 

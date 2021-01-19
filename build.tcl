@@ -1,5 +1,7 @@
 global project_sources 
 set project_sources {
+    src/gated_clock.v
+    src/clock_divider.v
     src/msgpu_new.v
     src/vga.v
     src/mcu_bus.v

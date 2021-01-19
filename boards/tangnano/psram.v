@@ -1,15 +1,15 @@
 module psram(
     input reset,
     input sysclk,
-    output reg psram_sclk,
+    output wire psram_sclk,
     output reg psram_ce_n,
     input[3:0] psram_sio_in,
     output reg[3:0] psram_sio_out,
-    output debug_led,
+    output reg debug_led,
     input enable,
     // input reg[23:0] address,
-    input reg rw,
-    output next_byte_needed,
+    input rw,
+    output reg next_byte_needed,
 
     // control
     input set_address,
@@ -354,6 +354,7 @@ always @(negedge sysclk or posedge reset) begin
             state <= 0;
             is_first_byte <= 1'b1;
             driver_state <= `STATE_WAITING_FOR_DEVICE;
+            debug_led <= 1;
         end
         `STATE_WAITING_FOR_DEVICE: begin
             DELAY(`STATE_RESET, 2000); // TODO: calculate value
@@ -363,9 +364,10 @@ always @(negedge sysclk or posedge reset) begin
         end
         `STATE_READ_EID: begin
             PSRAM_READ_EID(`PSRAM_STATE_IDLE);
+            debug_led <= 0;
         end
         `PSRAM_STATE_IDLE: begin
-            if (kdg == 8'h5d) debug_led <= 1'b0;
+            //if (kdg == 8'h5d) debug_led <= 1'b0;
             if (set_address) begin
                 $display("write %x to psram at address: %x", data, address);
             end

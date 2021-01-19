@@ -8,6 +8,7 @@ set board_sources {
     top.v 
     tangnano.cst
     pll/pll.v
+    psram.v
 }
 #<=======  SOURCES  ======># 
 
