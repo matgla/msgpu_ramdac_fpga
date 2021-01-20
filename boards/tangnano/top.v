@@ -13,28 +13,44 @@ module top(
     input wire [7:0] mcu_bus,
     input wire mcu_bus_command_data,
     /* MCU BUS END */
-    output psram_sclk, 
+    output wire psram_sclk, 
     output psram_ce_n, 
-    inout[3:0] psram_sio
+    inout[3:0] psram_sio,
+    input sys_reset_n
 );
 
 wire system_clock; // 201.6 MHz 
 wire vga_clock; // 25.175 MHz 
 wire psram_clock; //67.3 MHz 
+wire clock_out;
 
 pll pll_instance(
-    .clkout(system_clock),
+    .clkout(clock_out),
     .clkoutd(vga_clock),
     .clkin(clock)
 );
 
-reg psram_reset;
+//reg psram_reset;
+//assign psram_sclk = clock;
+
+reg[7:0] counter;
+
+reg[31:0] led_counter;
+
+wire osc_clock;
+
+OSCH osc( 
+    .OSCOUT(system_clock)
+);
+
+defparam osc.FREQ_DIV = 2;
 
 clock_divider divider(
     .clkin(system_clock),
-    .div(3),
+    .div(128),
     .clkout(psram_clock)
 );
+
 
 wire[3:0] psram_sio_out;
 wire[3:0] psram_sio_in;

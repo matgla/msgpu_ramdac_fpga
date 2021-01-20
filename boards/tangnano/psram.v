@@ -43,6 +43,7 @@ module psram(
 
 reg psram_sclk_enable;
 reg[3:0] psram_sio_dir;
+
 /* driveable system_clock */
 gated_clock gated_clk(
     .clock(sysclk),
@@ -348,7 +349,9 @@ endtask
 
 reg is_first_byte;
 
-always @(negedge sysclk or posedge reset) begin
+reg [31:0] counter;
+
+always @(negedge sysclk) begin
     case (driver_state)
         `STATE_INIT: begin
             state <= 0;
@@ -357,25 +360,24 @@ always @(negedge sysclk or posedge reset) begin
             debug_led <= 1;
         end
         `STATE_WAITING_FOR_DEVICE: begin
+           // debug_led <= 0;
             DELAY(`STATE_RESET, 2000); // TODO: calculate value
         end
         `STATE_RESET: begin
             PSRAM_RESET(`STATE_READ_EID);
         end
         `STATE_READ_EID: begin
+          //  debug_led <= 1;
             PSRAM_READ_EID(`PSRAM_STATE_IDLE);
-            debug_led <= 0;
         end
         `PSRAM_STATE_IDLE: begin
-            //if (kdg == 8'h5d) debug_led <= 1'b0;
-            if (set_address) begin
-                $display("write %x to psram at address: %x", data, address);
-            end
-            else begin
-                is_first_byte <= 1'b1;
-            end
+            //debug_led <= 1;
+            if (kdg == 8'h5d) debug_led = 0;
+            else debug_led = 1;
         end
         default: begin
+            //debug_led <= 1;
+            driver_state <= `STATE_INIT;
         end
     endcase
 end

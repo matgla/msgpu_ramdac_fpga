@@ -10,7 +10,7 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 find_program(docker_executable docker REQUIRED)
 
 add_custom_target(
-    flash_tangnano
+    flash_gw_tangnano
     COMMAND 
     sudo ${docker_executable} run --privileged --cap-add=ALL
         -v /dev:/dev 
@@ -22,3 +22,9 @@ add_custom_target(
     DEPENDS tangnano
 )
 
+add_custom_target(
+    flash_tangnano 
+    COMMAND openFPGALoader ${CMAKE_CURRENT_BINARY_DIR}/impl/pnr/project.fs 
+    VERBATIM 
+    DEPENDS tangnano 
+)
