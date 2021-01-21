@@ -9,6 +9,13 @@ set board_sources {
     tangnano.cst
     pll/pll.v
     psram.v
+    psram/commands.v 
+    psram/read.v
+    psram/globals.v
+    psram/spi.sv
+    psram/reset.v
+    psram/write.v
+    psram/read_eid.v
 }
 #<=======  SOURCES  ======># 
 
@@ -43,6 +50,7 @@ proc set_options {} {
     set_option -bit_encrypt 0
     set_option -bit_security 0
     set_option -fix_gated_and_generated_clocks 1
+    set_option -verilog_std sysv2017
 }
 
 proc set_sources {project_sources board_path} {

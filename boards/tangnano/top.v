@@ -1,3 +1,5 @@
+`include "psram/spi.sv"
+
 module top(
     input clock, 
     output wire led,
@@ -47,7 +49,7 @@ defparam osc.FREQ_DIV = 2;
 
 clock_divider divider(
     .clkin(system_clock),
-    .div(128),
+    .div(64),
     .clkout(psram_clock)
 );
 
@@ -59,7 +61,7 @@ assign psram_sio_in = psram_sio;
 genvar i;
 generate
     for (i = 0; i < 4; i=i+1) begin 
-        assign psram_sio[i] = psram_sio_dir[i] ? psram_sio_out[i] : 1;
+        assign psram_sio[i] = psram_sio_dir[i] ? psram_sio_out[i] : 1'bz;
     end
 endgenerate
 
@@ -70,13 +72,18 @@ reg psram_set_address;
 reg psram_write_data;
 reg psram_address;
 reg[7:0] psram_byte;
+
+SpiBus bus();
+
+assign psram_sclk = bus.sclk;
+assign psram_ce_n = bus.ce;
+assign bus.signal_input = psram_sio_in;
+assign psram_sio_out = bus.signal_output;
+assign psram_sio_dir = bus.signal_direction;
+
 psram psram(
     .reset(psram_reset),
     .sysclk(psram_clock),
-    .psram_sclk(psram_sclk),
-    .psram_ce_n(psram_ce_n),
-    .psram_sio_in(psram_sio_in),
-    .psram_sio_out(psram_sio_out),
     .debug_led(led),
     .enable(psram_enable),
     .rw(psram_rw),
@@ -84,7 +91,8 @@ psram psram(
     .set_address(psram_set_address),
     .write_data(psram_write_data),
     .address(psram_address),
-    .data(psram_byte)
+    .data(psram_byte),
+    .bus(bus)
 );
 
 msgpu #(.VGA_RED_BITS(4),
