@@ -8,7 +8,7 @@ set board_sources {
     top.v 
     tangnano.cst
     pll/pll.v
-    psram.v
+    psram.sv
     psram/commands.v 
     psram/read.v
     psram/globals.v

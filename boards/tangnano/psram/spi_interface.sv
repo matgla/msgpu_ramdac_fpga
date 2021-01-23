@@ -116,8 +116,6 @@ interface SpiBus(logic sysclk);
         end
     end
 
-
-
     always @(current_spi_mode) begin
         case (current_spi_mode)
             `SPI_MODE_1: signal_direction = 4'b0001;
