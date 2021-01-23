@@ -264,12 +264,12 @@ function RoutineStatus spi_read(bit[23:0] address, int bytes_to_read);
         SPI_READ_PERFORM_READ: begin 
             if (bus.spi_read_write_u8(8'h00) == FINISHED) begin 
                 spi_read_state <= SPI_READ_PROCESS_READ;
+                memory_buffer_read[read_bytes_counter] <= spi_rx;
             end
         end
         SPI_READ_PROCESS_READ: begin 
-            if (read_bytes_counter < bytes_to_read) begin 
-                memory_buffer_read[read_bytes_counter] <= spi_rx;
-                read_bytes_counter <= read_bytes_counter + 1; 
+            if (read_bytes_counter < bytes_to_read - 1) begin 
+                read_bytes_counter <= read_bytes_counter + 1;
                 spi_read_state <= SPI_READ_PERFORM_READ;
             end else begin
                 spi_read_state <= SPI_READ_FINISH;
@@ -326,11 +326,17 @@ function RoutineStatus spi_write(bit[23:0] address, int data_size);
         end
         SPI_WRITE_PEREPARE_NEXT_BYTE: begin 
             write_bytes_counter <= write_bytes_counter + 1;
-            if (write_bytes_counter < data_size) begin 
-                spi_write_state <= SPI_WRITE_PREPARE_FOR_COMMAND;
-                bus.ce_low();
-                return FINISHED;
+            if (write_bytes_counter < data_size - 1) begin 
+                spi_write_state <= SPI_WRITE_SEND_BYTE;
             end
+            else begin 
+                spi_write_state <= SPI_WRITE_FINISH;
+                bus.ce_high();
+            end
+        end
+        SPI_WRITE_FINISH: begin 
+            spi_write_state <= SPI_WRITE_PREPARE_FOR_COMMAND;
+            return FINISHED;
         end
     endcase
     return WORKING;
@@ -370,7 +376,7 @@ function TestStatus test_spi_write_read();
             spi_test_data[3] <= 8'h18;
             spi_test_data[4] <= 8'hdd;
             for (i = 0; i < 5; i = i + 1) begin 
-                memory_buffer_write[i] = spi_test_data[i];
+                memory_buffer_write[i] <= spi_test_data[i];
             end
             spi_test_state <= SPI_TEST_WRITE_FIRST_PART;
         end
@@ -380,8 +386,8 @@ function TestStatus test_spi_write_read();
             end
         end
         SPI_TEST_PREPARE_SECOND_PART: begin 
-            memory_buffer_write[0] = 8'hba;
-            memory_buffer_write[1] = 8'haa;
+            memory_buffer_write[0] <= 8'hfa;
+            memory_buffer_write[1] <= 8'hc9;
             spi_test_state <= SPI_TEST_WRITE_SECOND_PART;
         end
         SPI_TEST_WRITE_SECOND_PART: begin 
@@ -395,13 +401,15 @@ function TestStatus test_spi_write_read();
             end
         end 
         SPI_TEST_VERIFY_FIRST_PART: begin 
-            for (i = 0; i < 5; ++i) begin 
-                if (memory_buffer_read[i] != spi_test_data[i]) begin 
-                    spi_test_state <= SPI_TEST_INIT;
-                    return FAILED;
-                end
+            if (memory_buffer_read[0] != 8'h12
+                || memory_buffer_read[1] != 8'haa
+                || memory_buffer_read[2] != 8'h00 
+                || memory_buffer_read[3] != 8'h18 
+                || memory_buffer_read[4] != 8'hdd) begin 
+                return FAILED;
+            end else begin 
+                spi_test_state <= SPI_TEST_READ_SECOND_PART;
             end
-            spi_test_state <= SPI_TEST_READ_SECOND_PART;
         end
         SPI_TEST_READ_SECOND_PART: begin 
             if (spi_read(24'h0000ff, 2) == FINISHED) begin 
@@ -410,8 +418,8 @@ function TestStatus test_spi_write_read();
         end
         SPI_TEST_VERIFY_SECOND_PART: begin 
             spi_test_state <= SPI_TEST_INIT;
-            if (memory_buffer_read[0] != 8'hba) return FAILED;
-            else if (memory_buffer_read[1] != 8'haa) return FAILED; 
+            if (memory_buffer_read[0] != 8'hfa) return FAILED;
+            else if (memory_buffer_read[1] != 8'hc9) return FAILED; 
             else return PASSED;
         end
     endcase 
