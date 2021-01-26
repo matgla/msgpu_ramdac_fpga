@@ -85,12 +85,84 @@ interface SpiBus(logic sysclk);
             end
             READ_WRITE_0_BIT: begin 
                 spi_read_state <= READ_WRITE_ENABLE_CLOCK;
-                signal_output[0] <= 0;
                 spi_enable_clock <= 0;
                 return SPI_OPERATION_FINISHED;
             end
         endcase
         return SPI_OPERATION_WORKING;
+    endfunction
+
+    typedef enum {
+        QSPI_WRITE_ENABLE_CLOCK,
+        QSPI_WRITE_PART_1,
+        QSPI_WRITE_PART_2
+    } QspiWriteState;
+
+    QspiWriteState qspi_write_state;
+
+    function operation_status qspi_write_u8(byte data);
+        case (qspi_write_state) 
+            QSPI_WRITE_ENABLE_CLOCK: begin 
+                current_spi_mode <= `SPI_MODE_4_OUTPUTS;
+                spi_enable_clock <= 1;
+                signal_output[3:0] <= data[7:4];
+                qspi_write_state <= QSPI_WRITE_PART_1;
+            end
+            QSPI_WRITE_PART_1: begin 
+                signal_output[3:0] <= data[3:0];
+                qspi_write_state <= QSPI_WRITE_PART_2;
+            end
+            QSPI_WRITE_PART_2: begin 
+                //signal_output[3:0] = 4'b0000;
+                spi_enable_clock <= 0;
+                qspi_write_state <= QSPI_WRITE_ENABLE_CLOCK;
+                return SPI_OPERATION_FINISHED;
+            end
+        endcase 
+        return SPI_OPERATION_WORKING;
+    endfunction
+
+    typedef enum {
+        QSPI_READ_ENABLE_CLOCK, 
+        QSPI_READ_PART_1,
+        QSPI_READ_PART_2,
+        QSPI_READ_DELAY
+    } QspiReadState;
+    
+    QspiReadState qspi_read_state;
+    int qspi_read_delay; 
+
+    function operation_status qspi_read_u8(); 
+        case (qspi_read_state)
+            QSPI_READ_ENABLE_CLOCK: begin 
+                current_spi_mode <= `SPI_MODE_4_INPUTS;
+                spi_enable_clock <= 1;
+                qspi_read_delay <= 0;
+                qspi_read_state <= QSPI_READ_PART_1;
+            end
+            QSPI_READ_PART_1: begin 
+                qspi_read_state <= QSPI_READ_PART_2;
+            end
+            QSPI_READ_PART_2: begin 
+                spi_enable_clock <= 0;
+                qspi_read_state <= QSPI_READ_ENABLE_CLOCK;
+                return SPI_OPERATION_FINISHED;
+            end
+            QSPI_READ_DELAY: begin 
+                if (qspi_read_delay < 3 ) qspi_read_delay <= qspi_read_delay + 1; 
+                else begin 
+                    qspi_read_state <= QSPI_READ_ENABLE_CLOCK;
+                    return SPI_OPERATION_FINISHED;
+                end
+           end
+        endcase 
+        return SPI_OPERATION_WORKING;
+    endfunction
+
+    function spi_init();
+        spi_read_state <= READ_WRITE_ENABLE_CLOCK;
+        qspi_write_state <= QSPI_WRITE_ENABLE_CLOCK;
+        qspi_read_state <= QSPI_READ_ENABLE_CLOCK;
     endfunction
 
     always @(posedge sclk or posedge reset) begin

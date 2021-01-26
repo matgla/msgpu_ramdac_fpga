@@ -49,7 +49,7 @@ defparam osc.FREQ_DIV = 2;
 
 clock_divider divider(
     .clkin(system_clock),
-    .div(64),
+    .div(3),
     .clkout(psram_clock)
 );
 
