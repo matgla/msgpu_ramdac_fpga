@@ -31,7 +31,7 @@ reg[1:0] current_spi_mode;
 reg[7:0] spi_rx;
 reg[7:0] rx_buffer_high;
 
-interface SpiBus(logic sysclk);
+interface SpiBus();
     logic reset;
     logic sclk;
     logic ce;
@@ -39,11 +39,11 @@ interface SpiBus(logic sysclk);
     logic[3:0] signal_output;
     logic[3:0] signal_direction;
 
-    function ce_low();
+    function void ce_low();
         ce <= 0;
     endfunction
 
-    function ce_high();
+    function void ce_high();
         ce <= 1;
     endfunction
 
@@ -148,33 +148,24 @@ interface SpiBus(logic sysclk);
         return SPI_OPERATION_WORKING;
     endfunction
 
-    function spi_init();
+    function void spi_init();
         spi_read_state <= READ_WRITE_ENABLE_CLOCK;
         qspi_write_state <= QSPI_WRITE_ENABLE_CLOCK;
         qspi_read_state <= QSPI_READ_ENABLE_CLOCK;
     endfunction
 
-    always @(posedge sclk or posedge reset) begin
-        if (reset) begin
-            spi_rx <= 8'hff;
-            rx_buffer_high <= 8'hff;
-        end
-        else begin
-
-            if (sclk) begin
-                case (current_spi_mode)
-                    `SPI_MODE_1: begin
-                        spi_rx <= {spi_rx[6:0], signal_input[1]};
-                        rx_buffer_high <= {spi_rx[6:0], spi_rx[7]};
-                    end
-                    `SPI_MODE_4_INPUTS: begin
-                        spi_rx <= {spi_rx[3:0], signal_input};
-                        rx_buffer_high <= {rx_buffer_high[3:0], spi_rx[7:4]};
-                    end
-                    default: begin end
-                endcase
+    always @(posedge sclk) begin
+        case (current_spi_mode)
+            `SPI_MODE_1: begin
+                spi_rx <= {spi_rx[6:0], signal_input[1]};
+                rx_buffer_high <= {spi_rx[6:0], spi_rx[7]};
             end
-        end
+            `SPI_MODE_4_INPUTS: begin
+                spi_rx <= {spi_rx[3:0], signal_input};
+                rx_buffer_high <= {rx_buffer_high[3:0], spi_rx[7:4]};
+            end
+            default: begin end
+        endcase
     end
 
     always @(current_spi_mode) begin

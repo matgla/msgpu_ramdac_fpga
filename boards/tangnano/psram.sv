@@ -5,8 +5,6 @@ module psram(
     input reset,
     input sysclk,
     SpiBus bus,
-    output reg debug_led,
-    input enable,
     // input reg[23:0] address,
     input rw,
     output reg next_byte_needed,
@@ -134,8 +132,8 @@ function RoutineStatus read_eid();
         end
         READ_EID_SEND_ADDRESS: begin 
             if (address_counter < 3) begin 
-                if (bus.spi_read_write_u8(8'hff) == FINISHED) begin 
-                    address_counter <= address_counter + 1;
+                if (bus.spi_read_write_u8(8'hff) == SPI_OPERATION_FINISHED) begin 
+                    address_counter <= address_counter + 1'b1;
                 end
             end else begin 
                 read_eid_state <= READ_MFID;
@@ -189,7 +187,7 @@ function RoutineStatus read_eid();
                 end
             endcase
             read_eid_state <= REQUEST_EID;
-            eid_bytes_received <= eid_bytes_received + 1;
+            eid_bytes_received <= eid_bytes_received + 1'b1;
         end
         READ_EID_FINISH: begin 
             bus.ce_high();
@@ -223,13 +221,13 @@ function RoutineStatus qspi_write_address(bit[23:0] address);
         QSPI_WRITE_ADDRESS_BYTE1: begin 
         if (bus.qspi_write_u8(address[23:16]) == SPI_OPERATION_FINISHED) begin 
                 qspi_write_address_state <= QSPI_WRITE_ADDRESS_BYTE2;
-                bus.qspi_write_u8(address[15:8]); 
+                void'(bus.qspi_write_u8(address[15:8])); 
             end
         end 
         QSPI_WRITE_ADDRESS_BYTE2: begin 
         if (bus.qspi_write_u8(address[15:8]) == SPI_OPERATION_FINISHED) begin
                 qspi_write_address_state <= QSPI_WRITE_ADDRESS_BYTE3;
-                bus.qspi_write_u8(address[7:0]); 
+                void'(bus.qspi_write_u8(address[7:0])); 
             end
         end
         QSPI_WRITE_ADDRESS_BYTE3: begin 
@@ -351,13 +349,13 @@ function RoutineStatus qspi_fast_read(bit[23:0] address, int size);
         QSPI_FAST_READ_SEND_ADDRESS: begin 
             if (qspi_write_address(address) == FINISHED) begin 
                 qspi_fast_read_state <= QSPI_FAST_READ_WAIT_CYCLES;
-                qspi_wait_cycles(6);
+                void'(qspi_wait_cycles(6));
             end
         end
         QSPI_FAST_READ_WAIT_CYCLES: begin 
         if (qspi_wait_cycles(6) == FINISHED) begin 
             qspi_fast_read_state <= QSPI_FAST_READ_GET_BYTE;
-            bus.qspi_read_u8();
+            void'(bus.qspi_read_u8());
         end
         end
         QSPI_FAST_READ_GET_BYTE: begin 
@@ -368,7 +366,7 @@ function RoutineStatus qspi_fast_read(bit[23:0] address, int size);
                     qspi_fast_read_state <= QSPI_FAST_READ_PROCCESS_BYTE;
                 end
                 else begin 
-                    bus.qspi_read_u8();
+                    void'(bus.qspi_read_u8());
                 end
             end
         end
@@ -435,7 +433,6 @@ always @(negedge sysclk) begin
     // bus.ce <= sp.ce;
     case (driver_state)
         PSRAM_STATE_INIT: begin
-            //debug_led <= 1;
             bus.spi_init();
             error_code <= NOT_FAILED;
             init();
@@ -460,12 +457,11 @@ always @(negedge sysclk) begin
             end
         end
         PSRAM_STATE_IDLE: begin 
-            debug_led <= 0;
         end
         PSRAM_STATE_FAILED: begin 
             if (error_code == GOT_BAD_KDG) begin 
                 if (recovery_counter < 3) begin 
-                    recovery_counter <= recovery_counter + 1;
+                    recovery_counter <= recovery_counter + 1'b1;
                     driver_state <= PSRAM_EXIT_QSPI_AND_RESET;
                 end
             end
@@ -476,10 +472,13 @@ always @(negedge sysclk) begin
           //  end
         end
         default: begin
-            //debug_led <= 1;
             driver_state <= PSRAM_STATE_INIT;
         end
     endcase
+end
+
+always @(posedge write_data) begin 
+    memory_buffer_write[address] <= data;
 end
 
 endmodule

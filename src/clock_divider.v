@@ -1,14 +1,14 @@
 
 module clock_divider(
     input clkin,
-    input[7:0] div,
+    int div,
     output reg clkout
 );
 
 reg[7:0] counter = 8'h0;
 
 always @(posedge clkin) begin
-    counter <= counter + 1;
+    counter <= counter + 1'b1;
     if (counter >= div - 1) begin 
         counter <= 0;
     end

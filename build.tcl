@@ -1,10 +1,10 @@
 global project_sources 
 set project_sources {
     src/gated_clock.v
+    src/mcu_bus.sv
     src/clock_divider.v
-    src/msgpu_new.v
+    src/msgpu.sv
     src/vga.v
-    src/mcu_bus.v
 }
 
 proc print_greeting {} {

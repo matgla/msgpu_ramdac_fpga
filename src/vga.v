@@ -15,9 +15,9 @@ module vga #(
     input enable, 
     output hsync,
     output vsync,
-    output wire[RED_BITS:0] red, 
-    output wire[GREEN_BITS:0] green,
-    output wire[BLUE_BITS:0] blue,
+    output wire[RED_BITS-1:0] red, 
+    output wire[GREEN_BITS-1:0] green,
+    output wire[BLUE_BITS-1:0] blue,
     input buffer_clock,
     output reg[21:0] read_address,
     input wire[11:0] pixel_data
@@ -73,9 +73,9 @@ always @(posedge buffer_clock or posedge reset) begin
     end
     else begin 
     if (copied < 640 && !almost_line_end && !almost_frame_end) begin 
-        read_address <= read_address + 1;
+        read_address <= read_address + 1'b1;
         if (!is_first) begin   
-            copied <= copied + 1;
+            copied <= copied + 1'b1;
             line_buffer[copied] <= pixel_data;
         end 
         else begin 
@@ -86,7 +86,7 @@ always @(posedge buffer_clock or posedge reset) begin
     if (almost_line_end_posedge) begin 
         copied <= 0;
         is_first <= 1;
-        read_address <= read_address - 1;
+        read_address <= read_address - 1'b1;
     end
     if (almost_frame_end_posedge) begin 
         read_address <= 0;
@@ -112,11 +112,11 @@ always @(posedge clock) begin
     if (frame_end) begin 
         vsync_counter <= 0;
     end
-    else if (line_end) vsync_counter <= vsync_counter + 1;
+    else if (line_end) vsync_counter <= vsync_counter + 1'b1;
 end
 
 always @(posedge clock) begin 
-    if (enable) hsync_counter <= hsync_counter + 1;
+    if (enable) hsync_counter <= hsync_counter + 1'b1;
     if (line_end) begin 
         hsync_counter <= 0;
     end
