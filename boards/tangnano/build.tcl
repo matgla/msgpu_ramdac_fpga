@@ -10,12 +10,7 @@ set board_sources {
     pll/pll.v
     psram.sv
     psram/commands.v 
-    psram/read.v
-    psram/globals.v
-    psram/spi.sv
-    psram/reset.v
-    psram/write.v
-    psram/read_eid.v
+    psram/spi_interface.sv
 }
 #<=======  SOURCES  ======># 
 

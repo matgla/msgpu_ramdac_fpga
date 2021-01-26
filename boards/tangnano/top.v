@@ -1,4 +1,4 @@
-`include "psram/spi.sv"
+`include "psram/spi_interface.sv"
 
 module top(
     input clock, 

@@ -113,7 +113,6 @@ interface SpiBus(logic sysclk);
                 qspi_write_state <= QSPI_WRITE_PART_2;
             end
             QSPI_WRITE_PART_2: begin 
-                //signal_output[3:0] = 4'b0000;
                 spi_enable_clock <= 0;
                 qspi_write_state <= QSPI_WRITE_ENABLE_CLOCK;
                 return SPI_OPERATION_FINISHED;
@@ -125,19 +124,16 @@ interface SpiBus(logic sysclk);
     typedef enum {
         QSPI_READ_ENABLE_CLOCK, 
         QSPI_READ_PART_1,
-        QSPI_READ_PART_2,
-        QSPI_READ_DELAY
+        QSPI_READ_PART_2
     } QspiReadState;
     
     QspiReadState qspi_read_state;
-    int qspi_read_delay; 
 
     function operation_status qspi_read_u8(); 
         case (qspi_read_state)
             QSPI_READ_ENABLE_CLOCK: begin 
                 current_spi_mode <= `SPI_MODE_4_INPUTS;
                 spi_enable_clock <= 1;
-                qspi_read_delay <= 0;
                 qspi_read_state <= QSPI_READ_PART_1;
             end
             QSPI_READ_PART_1: begin 
@@ -148,13 +144,6 @@ interface SpiBus(logic sysclk);
                 qspi_read_state <= QSPI_READ_ENABLE_CLOCK;
                 return SPI_OPERATION_FINISHED;
             end
-            QSPI_READ_DELAY: begin 
-                if (qspi_read_delay < 3 ) qspi_read_delay <= qspi_read_delay + 1; 
-                else begin 
-                    qspi_read_state <= QSPI_READ_ENABLE_CLOCK;
-                    return SPI_OPERATION_FINISHED;
-                end
-           end
         endcase 
         return SPI_OPERATION_WORKING;
     endfunction
