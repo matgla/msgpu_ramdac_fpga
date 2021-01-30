@@ -1,11 +1,10 @@
-
 module clock_divider(
     input clkin,
     int div,
     output reg clkout
 );
 
-reg[7:0] counter = 8'h0;
+int counter = 32'h0;
 
 always @(posedge clkin) begin
     counter <= counter + 1'b1;
@@ -17,4 +16,3 @@ always @(posedge clkin) begin
 end
 
 endmodule
-`resetall

@@ -1,5 +1,3 @@
-`include "psram/spi_interface.sv"
-`include "mcu_bus_interface.sv"
 
 module top(
     input clock, 
@@ -54,44 +52,29 @@ clock_divider divider(
 );
 
 
-wire[3:0] psram_sio_out;
 wire[3:0] psram_sio_in;
 wire[3:0] psram_sio_dir;
 assign psram_sio_in = psram_sio;
 genvar i;
 generate
     for (i = 0; i < 4; i=i+1) begin : psram_sio_direction_assignment
-        assign psram_sio[i] = psram_sio_dir[i] ? psram_sio_out[i] : 1'bz;
+        assign psram_sio[i] = psram_sio_dir[i] ? bus.signal_output[i] : 1'bz;
     end
 endgenerate
 
+SpiBus bus(psram_clock, psram_sclk);
 
-wire psram_reset = 0;
-wire psram_rw = 0;
-wire next_byte_needed = 0;
-wire psram_set_address = 0;
-wire psram_write_data = 0;
-wire[23:0] psram_address = 0;
-wire[7:0] psram_byte = 0;
-
-SpiBus bus();
-
-assign psram_sclk = bus.sclk;
+//assign psram_sclk = bus.sclk;
 assign psram_ce_n = bus.ce;
 assign bus.signal_input = psram_sio_in;
-assign psram_sio_out = bus.signal_output;
 assign psram_sio_dir = bus.signal_direction;
 
+MemoryInterface memory();
+
 psram psram(
-    .reset(psram_reset),
     .sysclk(psram_clock),
-    .rw(psram_rw),
-    .next_byte_needed(next_byte_needed),
-    .set_address(psram_set_address),
-    .write_data(psram_write_data),
-    .address(psram_address),
-    .data(psram_byte),
-    .bus(bus)
+    .bus(bus),
+    .memory(memory)
 );
 
 wire[7:0] mcu_bus_output;
@@ -101,14 +84,16 @@ wire mcu_bus_command_data_output_signal;
 
 generate 
     for (i = 0; i < 8; i = i + 1) begin : mcu_bus_direction_assignment
-        assign mcu_bus = mcu_bus_direction ? mcu_bus_output : 1'bz;
+        assign mcu_bus[i] = mcu_bus_direction ? mcu_bus_output[i] : 1'b1z;
     end
 endgenerate 
 
 assign mcu_bus_command_data = mcu_bus_direction ? mcu_bus_command_data_output_signal : 1'bz;
 
 wire mcu_bus_system_clock = system_clock;
-McuBusInterface mcu_bus_interface(mcu_bus_system_clock); 
+McuBusExternalInterface mcu_bus_interface(
+    .system_clock(system_clock)
+); 
 
 assign mcu_bus_output = mcu_bus_interface.signal_output;
 assign mcu_bus_direction = mcu_bus_interface.signal_direction; 
@@ -131,7 +116,8 @@ msgpu_instance(
     .vga_red(vga_red),
     .vga_green(vga_green),
     .vga_blue(vga_blue),
-    .mcu_bus(mcu_bus_interface)
+    .mcu_bus(mcu_bus_interface),
+    .memory(memory)
 );
 
 endmodule

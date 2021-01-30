@@ -1,30 +1,16 @@
 `include "psram/commands.v"
-`include "psram/spi_interface.sv"
+
+import spi_types::*;
 
 module psram(
-    input reset,
     input sysclk,
     SpiBus bus,
-    // input reg[23:0] address,
-    input rw,
-    output reg next_byte_needed,
-    // control
-    input set_address,
-    input write_data,
-    input[23:0] address,
-    input[7:0] data
+    MemoryInterface memory
 );
 
 // assign bus.signal_output = spi_out;
 
 /* driveable system_clock */
-assign psram_sclk_enable = spi_enable_clock;
-
-gated_clock gated_clk(
-    .clock(sysclk),
-    .clock_output(bus.sclk),
-    .enable(psram_sclk_enable)
-);
 
 
 typedef enum {FINISHED, WORKING} RoutineStatus;
@@ -50,14 +36,15 @@ typedef enum {
     ENABLE_RESET,
     PREPARE_FOR_RESET,
     PERFORM_RESET, 
-    WAIT_FOR_DEVICE 
+    WAIT_FOR_DEVICE,
+    RESET_DELAY
 } PsramResetState;
 PsramResetState psram_reset_state;
 
 function RoutineStatus psram_reset();
     case (psram_reset_state)
         PULL_DOWN_CE_AND_WAIT: begin 
-            current_spi_mode <= `SPI_MODE_4_OUTPUTS;
+            bus.current_spi_mode <= SPI_MODE_4_OUTPUTS;
             bus.ce_low();
             if (delay(20000) == FINISHED) begin 
                 bus.ce_high();
@@ -79,7 +66,7 @@ function RoutineStatus psram_reset();
             psram_reset_state <= PERFORM_RESET;
         end
         PERFORM_RESET: begin 
-            if (bus.spi_read_write_u8(`IPS6404L_SQ_RESET) == SPI_OPERATION_FINISHED) begin 
+            if (bus.spi_read_write_u8(IPS6404L_SQ_RESET) == SPI_OPERATION_FINISHED) begin 
                 psram_reset_state <= WAIT_FOR_DEVICE;
                 bus.ce_high();
             end
@@ -94,115 +81,9 @@ function RoutineStatus psram_reset();
     return WORKING;
 endfunction
 
-/************** READ EID *****************/
-
-bit [2:0] eid_type;
-bit [44:0] eid; 
-bit [7:0] mfid;
-bit [7:0] kdg;
-
-typedef enum {
-    PREPARE_FOR_READ_ID,
-    SEND_READ_EID_COMMAND,
-    READ_EID_SEND_ADDRESS,
-    READ_MFID,
-    PARSE_MFID,
-    REQUEST_KDG,
-    PARSE_KDG,
-    REQUEST_EID,
-    PARSE_EID,
-    READ_EID_FINISH
-} ReadEidState;
-
-ReadEidState read_eid_state;
-bit[3:0] eid_bytes_received;
-
-function RoutineStatus read_eid();
-    case (read_eid_state)
-        PREPARE_FOR_READ_ID: begin 
-            bus.ce_low();
-            address_counter <= 0;
-            read_eid_state <= SEND_READ_EID_COMMAND;
-            eid_bytes_received <= 0;
-        end 
-        SEND_READ_EID_COMMAND: begin
-            if (bus.spi_read_write_u8(`IPS6404L_SQ_READ_ID) == SPI_OPERATION_FINISHED) begin 
-                read_eid_state <= READ_EID_SEND_ADDRESS;
-            end
-        end
-        READ_EID_SEND_ADDRESS: begin 
-            if (address_counter < 3) begin 
-                if (bus.spi_read_write_u8(8'hff) == SPI_OPERATION_FINISHED) begin 
-                    address_counter <= address_counter + 1'b1;
-                end
-            end else begin 
-                read_eid_state <= READ_MFID;
-            end
-        end
-        READ_MFID: begin 
-            if (bus.spi_read_write_u8(8'h00) == SPI_OPERATION_FINISHED) begin 
-                read_eid_state <= PARSE_MFID;
-            end
-        end
-        PARSE_MFID: begin 
-            mfid <= spi_rx;
-            read_eid_state <= REQUEST_KDG;
-        end
-        REQUEST_KDG: begin 
-            if (bus.spi_read_write_u8(8'h00) == SPI_OPERATION_FINISHED) begin 
-                read_eid_state <= PARSE_KDG;
-            end
-        end
-        PARSE_KDG: begin 
-            kdg <= spi_rx;
-            read_eid_state <= REQUEST_EID;
-        end
-        REQUEST_EID: begin
-            if (bus.spi_read_write_u8(8'h00) == SPI_OPERATION_FINISHED) begin 
-                read_eid_state <= PARSE_EID;
-            end
-        end
-        PARSE_EID: begin 
-            case (eid_bytes_received)
-                0: begin 
-                    eid_type <= spi_rx[7:5];
-                    eid[43:39] <= spi_rx[4:0];
-                end
-                1: begin 
-                    eid[39:32] <= spi_rx;
-                end
-                2: begin 
-                    eid[31:24] <= spi_rx;
-                end
-                3: begin 
-                    eid[23:16] <= spi_rx;
-                end
-                4: begin 
-                    eid[15:8] <= spi_rx;
-                end
-                5: begin 
-                    eid[7:0] <= spi_rx;
-                    read_eid_state <= READ_EID_FINISH;
-                    return WORKING;
-                end
-            endcase
-            read_eid_state <= REQUEST_EID;
-            eid_bytes_received <= eid_bytes_received + 1'b1;
-        end
-        READ_EID_FINISH: begin 
-            bus.ce_high();
-            read_eid_state <= PREPARE_FOR_READ_ID;
-            return FINISHED;
-        end
-    endcase 
-
-    return WORKING;
-endfunction
-
 /****** QSPI VARIABLES **************/ 
 
 byte memory_buffer_write[1024];
-byte memory_buffer_read[1024];
 int address_counter;
 //int write_address; 
 
@@ -219,15 +100,13 @@ QspiWriteAddressState qspi_write_address_state;
 function RoutineStatus qspi_write_address(bit[23:0] address); 
     case (qspi_write_address_state) 
         QSPI_WRITE_ADDRESS_BYTE1: begin 
-        if (bus.qspi_write_u8(address[23:16]) == SPI_OPERATION_FINISHED) begin 
+            if (bus.qspi_write_u8(address[23:16]) == SPI_OPERATION_FINISHED) begin 
                 qspi_write_address_state <= QSPI_WRITE_ADDRESS_BYTE2;
-                void'(bus.qspi_write_u8(address[15:8])); 
             end
         end 
         QSPI_WRITE_ADDRESS_BYTE2: begin 
-        if (bus.qspi_write_u8(address[15:8]) == SPI_OPERATION_FINISHED) begin
+            if (bus.qspi_write_u8(address[15:8]) == SPI_OPERATION_FINISHED) begin
                 qspi_write_address_state <= QSPI_WRITE_ADDRESS_BYTE3;
-                void'(bus.qspi_write_u8(address[7:0])); 
             end
         end
         QSPI_WRITE_ADDRESS_BYTE3: begin 
@@ -271,16 +150,22 @@ function RoutineStatus psram_qspi_write(bit[23:0] address, int size);
         QSPI_WRITE_SEND_ADDRESS: begin 
             if (qspi_write_address(address) == FINISHED) begin 
                 psram_qspi_write_state <= QSPI_WRITE_SEND_BYTE;
+                memory.input_clock <= 1;
             end
         end
         QSPI_WRITE_SEND_BYTE: begin 
-            if (bus.qspi_write_u8(memory_buffer_write[qspi_write_bytes_counter])
+            if (bus.qspi_write_u8(memory.input_data)
                 == SPI_OPERATION_FINISHED) begin 
                 if (qspi_write_bytes_counter >= size - 1) begin 
                     psram_qspi_write_state <= QSPI_WRITE_DELAY;
                     bus.ce_high();
+                    memory.input_clock <= 0;
+                end else begin 
+                    memory.input_clock <= 1;
                 end
                 qspi_write_bytes_counter <= qspi_write_bytes_counter + 1;
+            end else begin 
+                memory.input_clock <= 0;
             end
         end
         QSPI_WRITE_DELAY: begin 
@@ -299,13 +184,13 @@ endfunction
 
 int wait_cycles_counter;
 function RoutineStatus qspi_wait_cycles(int required);
-    current_spi_mode <= `SPI_MODE_4_INPUTS;
+    bus.current_spi_mode <= SPI_MODE_4_INPUTS;
     if (wait_cycles_counter < required) begin 
-        spi_enable_clock <= 1;
+        bus.spi_enable_clock <= 1;
         wait_cycles_counter <= wait_cycles_counter + 1;
     end
     else begin 
-        spi_enable_clock <= 0;
+        bus.spi_enable_clock <= 0;
         wait_cycles_counter <= 0;
         return FINISHED;
     end
@@ -349,28 +234,26 @@ function RoutineStatus qspi_fast_read(bit[23:0] address, int size);
         QSPI_FAST_READ_SEND_ADDRESS: begin 
             if (qspi_write_address(address) == FINISHED) begin 
                 qspi_fast_read_state <= QSPI_FAST_READ_WAIT_CYCLES;
-                void'(qspi_wait_cycles(6));
             end
         end
         QSPI_FAST_READ_WAIT_CYCLES: begin 
-        if (qspi_wait_cycles(6) == FINISHED) begin 
-            qspi_fast_read_state <= QSPI_FAST_READ_GET_BYTE;
-            void'(bus.qspi_read_u8());
-        end
+            if (qspi_wait_cycles(6) == FINISHED) begin 
+                qspi_fast_read_state <= QSPI_FAST_READ_GET_BYTE;
+            end
         end
         QSPI_FAST_READ_GET_BYTE: begin 
+            memory.output_clock <= 0;
             if (bus.qspi_read_u8() == SPI_OPERATION_FINISHED) begin 
-                memory_buffer_read[qspi_read_counter] <= spi_rx;
+                memory.output_data <= bus.spi_rx;
                 qspi_read_counter <= qspi_read_counter + 1;
+                memory.output_clock <= 1;
                 if (qspi_read_counter >= size - 1) begin 
                     qspi_fast_read_state <= QSPI_FAST_READ_PROCCESS_BYTE;
-                end
-                else begin 
-                    void'(bus.qspi_read_u8());
                 end
             end
         end
         QSPI_FAST_READ_PROCCESS_BYTE: begin 
+            memory.output_clock <= 0;
             qspi_fast_read_state <= QSPI_FAST_READ_DELAY; 
         end
         QSPI_FAST_READ_DELAY: begin 
@@ -382,103 +265,89 @@ function RoutineStatus qspi_fast_read(bit[23:0] address, int size);
             qspi_fast_read_state <= QSPI_FAST_READ_INIT;
             return FINISHED;
         end
+        default: begin 
+            qspi_fast_read_state <= QSPI_FAST_READ_INIT;
+        end
     endcase
     return WORKING;
 endfunction
 
 /************** INIT*****************/ 
 
-function void init();
+task init;
+begin
     delay_counter <= 0;
     psram_reset_state <= PULL_DOWN_CE_AND_WAIT;
     address_counter <= 0; 
-    eid_type <= 0; 
-    eid <= 0; 
-    mfid <= 0; 
-    kdg <= 0; 
-    read_eid_state <= PREPARE_FOR_READ_ID;
-    eid_bytes_received <= 0; 
     qspi_write_address_state <= QSPI_WRITE_ADDRESS_BYTE1;
     psram_qspi_write_state <= QSPI_WRITE_INIT;
     qspi_fast_read_state <= QSPI_FAST_READ_INIT;
     wait_cycles_counter <= 0;
-endfunction
+end 
+endtask 
 
 typedef enum {
     PSRAM_STATE_INIT,
     PSRAM_STATE_RESET,
-    PSRAM_STATE_READ_EID,
-    PSRAM_STATE_VERIFY_EID,
-    PSRAM_STATE_TEST_SPI,
-    PSRAM_STATE_TEST_QSPI,
-    PSRAM_STATE_ENABLE_QSPI,
     PSRAM_STATE_FAILED, 
     PSRAM_STATE_IDLE,
-    PSRAM_EXIT_QSPI_AND_RESET
+    PSRAM_READ,
+    PSRAM_WRITE
 } PsramDriverState; 
 
 PsramDriverState driver_state;
 
-typedef enum {
-    GOT_BAD_KDG,
-    SPI_WRITE_FAILED, 
-    QSPI_WRITE_FAILED,
-    NOT_FAILED 
-} FailureCodes; 
-
-FailureCodes error_code;
-byte recovery_counter; 
-
+int to_be_readed;
+reg[23:0] to_be_written;
+int write_pointer;
+int address_to_write;
+int address_to_read;
 always @(negedge sysclk) begin
     // bus.ce <= sp.ce;
     case (driver_state)
         PSRAM_STATE_INIT: begin
             bus.spi_init();
-            error_code <= NOT_FAILED;
             init();
             driver_state <= PSRAM_STATE_RESET;
         end
         PSRAM_STATE_RESET: begin
             if (psram_reset() == FINISHED) 
-                driver_state <= PSRAM_STATE_READ_EID;
-        end
-        PSRAM_STATE_READ_EID: begin
-            if (read_eid() == FINISHED)
-                driver_state <= PSRAM_STATE_VERIFY_EID;
-        end
-        PSRAM_STATE_VERIFY_EID: begin
-            if (kdg != 8'h5d) begin 
-                driver_state <= PSRAM_STATE_FAILED;
-                error_code <= GOT_BAD_KDG;
-            end
-            else begin 
-                recovery_counter <= 0;
                 driver_state <= PSRAM_STATE_IDLE;
-            end
         end
         PSRAM_STATE_IDLE: begin 
-        end
-        PSRAM_STATE_FAILED: begin 
-            if (error_code == GOT_BAD_KDG) begin 
-                if (recovery_counter < 3) begin 
-                    recovery_counter <= recovery_counter + 1'b1;
-                    driver_state <= PSRAM_EXIT_QSPI_AND_RESET;
-                end
+            if (memory.output_size != 0) begin 
+                to_be_readed <= memory.output_size;
+                address_to_read <= memory.output_address;
+                driver_state <= PSRAM_READ;
+            end
+            if (memory.input_size != 0) begin 
+                to_be_written <= memory.input_size;
+                address_to_write <= memory.input_address;
+                driver_state <= PSRAM_WRITE;
             end
         end
-        PSRAM_EXIT_QSPI_AND_RESET: begin 
-          //  if (psram_exit_qspi() == FINISHED) begin 
-                driver_state <= PSRAM_STATE_INIT;
-          //  end
+        PSRAM_READ: begin 
+            if (qspi_fast_read(address_to_read, to_be_readed) == FINISHED) begin 
+                memory.busy <= 0;
+                driver_state <= PSRAM_STATE_IDLE; 
+            end else begin 
+                memory.busy <= 1;
+            end
+        end
+        PSRAM_WRITE: begin 
+            if (psram_qspi_write(address_to_write, to_be_written) == FINISHED) begin 
+                memory.busy <= 0;
+                driver_state <= PSRAM_STATE_IDLE;
+            end else begin 
+                memory.busy <= 1; 
+            end
+        end
+        PSRAM_STATE_FAILED: begin 
         end
         default: begin
             driver_state <= PSRAM_STATE_INIT;
         end
     endcase
-end
-
-always @(posedge write_data) begin 
-    memory_buffer_write[address] <= data;
 end
 
 endmodule

@@ -6,6 +6,7 @@ global board_sources
 #==========================#
 set board_sources {
     top.v 
+    psram/spi_types.sv
     tangnano.cst
     pll/pll.v
     psram.sv
@@ -33,7 +34,7 @@ proc configure_device {} {
 }
 
 proc set_options {} {
-    #set_option -synthesis_tool gowin 
+    set_option -synthesis_tool synplify_pro 
     set_option -top_module top 
 
     set_option -use_sspi_as_gpio 1
